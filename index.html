@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MentorLayer - AI Learning Operating System</title>
+    <script>
+      window.addEventListener('error', function(event) {
+        const msg = String(event.message || '').toLowerCase();
+        if (msg.includes('websocket') || msg.includes('vite') || msg.includes('extension')) {
+          return;
+        }
+        console.error('Caught global script error:', event.message, 'from', event.filename, 'at line', event.lineno);
+      });
+      window.addEventListener('unhandledrejection', function(event) {
+        const reason = event.reason;
+        if (!reason) return;
+        
+        // Ignore native browser event objects (often dispatched by failed resource loads or websocket closures)
+        if (reason instanceof Event) return;
+        
+        // Convert to string safely to check for benign environment messages
+        const reasonStr = String(reason.message || reason.stack || reason).toLowerCase();
+        if (
+          reasonStr.includes('websocket') ||
+          reasonStr.includes('ws://') ||
+          reasonStr.includes('wss://') ||
+          reasonStr.includes('vite') ||
+          reasonStr.includes('hmr') ||
+          reasonStr.includes('extension') ||
+          reasonStr.includes('abort') ||
+          reasonStr.includes('network')
+        ) {
+          return;
+        }
+        console.error('Caught global unhandled promise rejection:', reason);
+      });
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

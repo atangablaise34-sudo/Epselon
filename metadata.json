@@ -1,0 +1,11 @@
+{
+  "name": "Epselon Socratic Workspace",
+  "description": "MentorLayer is an AI-Powered Learning Operating System that transforms AI into a personalized, high-fidelity learning companion.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

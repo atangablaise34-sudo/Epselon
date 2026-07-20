@@ -1,0 +1,693 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import "tailwindcss";
+
+html {
+  font-size: 16px; /* Exactly 16px browser standard baseline to map rems accurately to px */
+  font-family: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-serif: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  
+  /* Custom scaled typography matching the user requirement:
+     - Body Text: 16px (1rem) – 18px (1.125rem)
+     - Labels/Captions: 14px (0.875rem)
+     - Section Headers: 20px (1.25rem)
+     - Main Titles: 24px (1.5rem) – 28px (1.75rem)
+  */
+  --font-size-xs: 0.875rem; /* 14px (Labels/Captions recommended) */
+  --font-size-sm: 1rem;     /* 16px (Body Text range start) */
+  --font-size-base: 1.125rem; /* 18px (Body Text range end) */
+  --font-size-lg: 1.25rem;  /* 20px (Section Headers recommended) */
+  --font-size-xl: 1.5rem;   /* 24px (Main Titles range start) */
+  --font-size-2xl: 1.75rem; /* 28px (Main Titles range end) */
+
+  --color-obsidian-deep: #0B1020;
+  --color-obsidian-dark: #141A2E;
+  --color-obsidian-panel: #141A2E;
+  --color-obsidian-border: #2B3448;
+  
+  --color-cyber-deep: #0B1020;
+  --color-cyber-dark: #141A2E;
+  --color-cyber-panel: #141A2E;
+  --color-cyber-border: #2B3448;
+  --color-cyber-neon: #705FD9;
+  
+  --color-light-bg: #FAFBFF;
+  --color-light-panel: #FFFFFF;
+  --color-light-border: #E5E7EB;
+
+  --color-brand-primary: #371BF2;
+  --color-brand-dark: #1711BF;
+  --color-brand-medium: #705FD9;
+  --color-brand-light: #9C8BD9;
+  
+  --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-fade-in: fadeIn 0.3s ease-out forwards;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Custom Scrollbars for Premium Look */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.custom-glass {
+  background: rgba(24, 29, 38, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.custom-glass-cyber {
+  background: rgba(12, 28, 36, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(0, 255, 204, 0.15);
+}
+
+.custom-glass-light {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+@keyframes dash {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes fade-in-node {
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Highly Refined Markdown Body Styles */
+.markdown-body {
+  font-family: var(--font-sans);
+  line-height: 1.625;
+}
+
+.markdown-body h1 {
+  font-family: var(--font-serif);
+  font-size: 1.75rem; /* 28px (Main Titles scale) */
+  font-style: italic;
+  font-weight: 500;
+  color: #ffffff;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 0.25rem;
+}
+
+.markdown-body h2 {
+  font-family: var(--font-serif);
+  font-size: 1.5rem; /* 24px (Main Titles scale) */
+  font-style: italic;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.95);
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.markdown-body h3 {
+  font-family: var(--font-sans);
+  font-size: 1.25rem; /* 20px (Section Headers scale) */
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.markdown-body p {
+  font-size: 1.0625rem; /* 17px (Body Text scale range 16px-18px) */
+  font-weight: 300;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 0.75rem;
+}
+
+.markdown-body ul, .markdown-body ol {
+  font-size: 1.0625rem; /* 17px (Body Text scale range 16px-18px) */
+  font-weight: 300;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 0.75rem;
+  padding-left: 1.25rem;
+}
+
+.markdown-body ul {
+  list-style-type: disc;
+}
+
+.markdown-body ol {
+  list-style-type: decimal;
+}
+
+.markdown-body li {
+  margin-bottom: 0.25rem;
+}
+
+.markdown-body strong {
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.markdown-body blockquote {
+  border-left: 3px solid #3b82f6;
+  background: rgba(59, 130, 246, 0.05);
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.75rem;
+  border-radius: 0 0.25rem 0.25rem 0;
+}
+
+.markdown-body blockquote p {
+  margin-bottom: 0;
+  font-style: italic;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.markdown-body hr {
+  border: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  margin: 1.25rem 0;
+}
+
+.markdown-body pre, .markdown-body code {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+}
+
+.markdown-body code {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 0.1rem 0.25rem;
+  border-radius: 0.15rem;
+  color: #3b82f6;
+}
+
+.markdown-body pre {
+  background: #080a0d;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 0.375rem;
+  padding: 0.75rem;
+  overflow-x: auto;
+  margin-bottom: 0.75rem;
+}
+
+.markdown-body pre code {
+  background: none;
+  padding: 0;
+  color: inherit;
+}
+
+/* Light theme overrides for markdown body */
+.light .markdown-body h1 {
+  color: #0f172a;
+  border-bottom-color: rgba(0, 0, 0, 0.08);
+}
+.light .markdown-body h2 {
+  color: #1e293b;
+}
+.light .markdown-body h3 {
+  color: #334155;
+}
+.light .markdown-body p, .light .markdown-body ul, .light .markdown-body ol {
+  color: #475569;
+}
+.light .markdown-body strong {
+  color: #0f172a;
+}
+.light .markdown-body code {
+  background: rgba(0, 0, 0, 0.04);
+}
+.light .markdown-body pre {
+  background: #f1f5f9;
+  border-color: rgba(0, 0, 0, 0.06);
+}
+.light .markdown-body hr {
+  border-top-color: rgba(0, 0, 0, 0.08);
+}
+
+
+/* ==========================================
+   MENTORLAYER UNIFIED DESIGN SYSTEM TOKENS
+   ========================================== */
+
+:root {
+  /* Brand Tokens */
+  --brand-primary: #371BF2;
+  --brand-primary-dark: #1711BF;
+  --brand-accent: #705FD9;
+  --brand-soft-accent: #9C8BD9;
+
+  /* Typography Scale Weights */
+  --weight-large-title: 700;
+  --weight-screen-title: 600;
+  --weight-section-header: 600;
+  --weight-button: 600;
+  --weight-body: 400;
+  --weight-label: 500;
+  --weight-caption: 400;
+  --weight-helper: 400;
+
+  /* Status Colors */
+  --color-success: #22C55E;
+  --color-warning: #F59E0B;
+  --color-error: #EF4444;
+  --color-info: #3B82F6;
+
+  /* Light Theme Values (Default Mode) */
+  --bg-app: #FAFBFF;
+  --bg-card: #FFFFFF;
+  --text-primary: #111827;
+  --text-secondary: #4B5563;
+  --text-muted: #6B7280;
+  --text-disabled: #9CA3AF;
+  --border-color: #E5E7EB;
+
+  --input-bg: #FFFFFF;
+  --input-border: #D6DAE5;
+  --input-focus: #371BF2;
+  
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.02);
+  --shadow-md: 0 4px 18px -2px rgba(55, 27, 242, 0.02), 0 2px 6px -1px rgba(0, 0, 0, 0.02);
+  --shadow-lg: 0 10px 30px -5px rgba(55, 27, 242, 0.03), 0 4px 12px -2px rgba(0, 0, 0, 0.02);
+}
+
+/* Dark Theme overrides (Obsidian, Cybernetic, etc.) */
+:root:not(.light),
+body:not(.light),
+.dark {
+  --bg-app: #0B1020;
+  --bg-card: #141A2E;
+  --text-primary: #F8FAFC;
+  --text-secondary: #CBD5E1;
+  --text-muted: #94A3B8;
+  --text-disabled: #64748b;
+  --border-color: #2B3448;
+
+  --input-bg: #141A2E;
+  --input-border: #2B3448;
+  --input-focus: #371BF2;
+
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 18px -2px rgba(0, 0, 0, 0.3), 0 2px 6px -1px rgba(0, 0, 0, 0.2);
+  --shadow-lg: 0 10px 30px -5px rgba(0, 0, 0, 0.4), 0 4px 12px -2px rgba(0, 0, 0, 0.3);
+}
+
+/* ==========================================
+   GLOBAL STYLE OVERRIDES FOR MENTORLAYER
+   ========================================== */
+
+/* Apply global font weights strictly to the typography scale with recommended sizing:
+   - Body Text (body, p, li): 16px - 18px (using 1rem/16px or 1.0625rem/17px)
+   - Labels/Captions (label, caption): 14px (0.875rem)
+   - Section Headers (h3): 20px (1.25rem)
+   - Main Titles (h1, h2): 24px - 28px (h1: 1.75rem/28px, h2: 1.5rem/24px)
+*/
+h1 { 
+  font-size: 1.75rem !important; /* 28px (Main Titles scale) */
+  font-weight: var(--weight-large-title) !important; 
+  letter-spacing: -0.02em !important; 
+}
+h2 { 
+  font-size: 1.5rem !important; /* 24px (Main Titles scale) */
+  font-weight: var(--weight-screen-title) !important; 
+  letter-spacing: -0.015em !important; 
+}
+h3 { 
+  font-size: 1.25rem !important; /* 20px (Section Headers scale) */
+  font-weight: var(--weight-section-header) !important; 
+  letter-spacing: -0.01em !important; 
+}
+button { 
+  font-size: 1rem !important; /* 16px Button Label */
+  font-weight: var(--weight-button) !important; 
+}
+body, p, li {
+  font-size: 1.0625rem !important; /* 17px (Body Text scale range 16px-18px) */
+  font-weight: var(--weight-body) !important;
+}
+body, p, span, div, li { 
+  font-weight: var(--weight-body); 
+}
+label { 
+  font-size: 0.875rem !important; /* 14px (Labels/Captions scale) */
+  font-weight: var(--weight-label) !important; 
+}
+caption { 
+  font-size: 0.875rem !important; /* 14px (Labels/Captions scale) */
+  font-weight: var(--weight-caption) !important; 
+}
+
+/* Apply Base Colors across all container classes seamlessly */
+body,
+.bg-app,
+.bg-[#0c0e12],
+.bg-[#050b0e],
+.bg-[#090b10],
+.bg-[#0d111d],
+.bg-slate-950,
+.bg-black {
+  background-color: var(--bg-app) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Premium Card Refinements */
+.bg-card,
+.bg-slate-900,
+.bg-slate-900\/95,
+.bg-slate-900\/60,
+.bg-slate-900\/40,
+.bg-[#12151c],
+.bg-[#141A2E],
+.bg-[#0d111d],
+.bg-[#090b10],
+.bg-[#080b10],
+.bg-[#081217],
+.bg-[#0c1c24],
+.bg-[#11141b],
+.bg-[#12151c]\/95,
+.bg-[#081217]\/95 {
+  background-color: var(--bg-card) !important;
+  border-radius: 16px !important;
+  box-shadow: var(--shadow-md) !important;
+}
+
+/* Subtle Borders & Dividers */
+.border-subtle,
+.border-slate-800,
+.border-slate-900,
+.border-[#1e2530],
+.border-[#232a36],
+.border-slate-800\/80,
+.border-slate-800\/60,
+.border-slate-800\/40,
+.border-slate-700\/80,
+.border-[#143542],
+.border-blue-900\/40,
+.border-blue-900\/30,
+.border-blue-900\/20,
+.border-brand-primary\/30,
+.border-brand-primary\/20,
+.border-brand-primary\/40,
+.border-purple-900\/20 {
+  border-color: var(--border-color) !important;
+}
+
+/* Text Refinement Overrides */
+.text-white,
+.text-slate-100,
+.text-slate-200 {
+  color: var(--text-primary) !important;
+}
+
+.text-slate-300,
+.text-slate-400 {
+  color: var(--text-secondary) !important;
+}
+
+.text-slate-500,
+.text-slate-600 {
+  color: var(--text-muted) !important;
+}
+
+/* Keep primary accent colors intact */
+.text-brand-primary,
+.text-[#371BF2] {
+  color: var(--brand-primary) !important;
+}
+
+.text-brand-medium,
+.text-[#705FD9] {
+  color: var(--brand-accent) !important;
+}
+
+.text-brand-light,
+.text-[#9C8BD9] {
+  color: var(--brand-soft-accent) !important;
+}
+
+/* Ensure white text is preserved inside highly contrast elements like buttons */
+.bg-brand-primary .text-white,
+.bg-brand-primary span,
+.bg-brand-primary h1,
+.bg-brand-primary p,
+.bg-brand-primary *,
+.bg-[#371BF2] *,
+.bg-blue-600 *,
+.bg-gradient-to-r *,
+.bg-emerald-600 *,
+.bg-red-500 *,
+button.bg-brand-primary,
+button.bg-[#371BF2],
+span.bg-emerald-500,
+span.bg-red-500,
+.btn-primary *,
+button.text-white {
+  color: #FFFFFF !important;
+}
+
+/* ==========================================
+   PRIMARY & SECONDARY BUTTONS REFINEMENTS
+   ========================================== */
+
+/* Primary Button Styling */
+.bg-brand-primary,
+.bg-blue-600,
+.bg-gradient-to-r:not(.prompt-coach-gradient-border) {
+  background: var(--brand-primary) !important;
+  color: #FFFFFF !important;
+  font-weight: 600 !important;
+  border-radius: 9999px !important;
+  border: none !important;
+  box-shadow: 0 4px 12px rgba(55, 27, 242, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.bg-brand-primary:hover,
+.bg-blue-600:hover,
+.bg-gradient-to-r:not(.prompt-coach-gradient-border):hover {
+  background: #2E17D3 !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 6px 16px rgba(55, 27, 242, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
+}
+
+.bg-brand-primary:active,
+.bg-blue-600:active {
+  background: #1711BF !important;
+  transform: translateY(0) !important;
+}
+
+.bg-brand-primary:disabled,
+.bg-blue-600:disabled {
+  opacity: 0.35 !important;
+  color: var(--text-muted) !important;
+  background: var(--border-color) !important;
+  box-shadow: none !important;
+  cursor: not-allowed;
+}
+
+/* Secondary Button Styling */
+.border-brand-primary,
+.border-blue-600 {
+  background-color: transparent !important;
+  border: 1.5px solid var(--brand-primary) !important;
+  color: var(--brand-primary) !important;
+  font-weight: 600 !important;
+  border-radius: 9999px !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.border-brand-primary:hover,
+.border-blue-600:hover {
+  background-color: rgba(55, 27, 242, 0.05) !important;
+}
+
+/* ==========================================
+   PROMPT INPUT & COACH REFINEMENTS
+   ========================================== */
+
+/* Input fields, textarea elements */
+input:not(.bg-transparent),
+textarea:not(.bg-transparent),
+select:not(.bg-transparent) {
+  background-color: var(--input-bg) !important;
+  border: 1px solid var(--input-border) !important;
+  color: var(--text-primary) !important;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+input:not(.bg-transparent):focus,
+textarea:not(.bg-transparent):focus,
+select:not(.bg-transparent):focus {
+  border-color: var(--brand-primary) !important;
+  outline: none !important;
+  /* Hollow cypher effect for general inputs: thin glow outline with clean negative space gap */
+  box-shadow: 
+    0 0 0 2.5px var(--bg-card), 
+    0 0 0 4.5px var(--brand-accent),
+    0 0 10px rgba(112, 95, 217, 0.2) !important;
+}
+
+/* Explicit style for transparent inputs and textareas to avoid mapping out internal lines or having box-shadows */
+.bg-transparent,
+#inp_chat_msg {
+  background-color: transparent !important;
+  border: none !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.bg-transparent:focus,
+#inp_chat_msg:focus {
+  background-color: transparent !important;
+  border: none !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera, and other browsers while maintaining scroll effect */
+.no-scrollbar::-webkit-scrollbar {
+  display: none !important;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none !important;  /* IE and Edge */
+  scrollbar-width: none !important;  /* Firefox */
+}
+
+/* High-contrast placeholder */
+::placeholder {
+  color: var(--text-disabled) !important;
+  opacity: 0.8 !important;
+}
+
+/* The Prompt Input Container Box */
+.flex-col.bg-slate-900\/95.border-slate-700\/80 {
+  background-color: var(--bg-card) !important;
+  border: 1.5px solid var(--input-border) !important;
+  border-radius: 20px !important;
+  box-shadow: none !important; /* No internal box shadow, keep it perfectly flat and elegant */
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.flex-col.bg-slate-900\/95.border-slate-700\/80:focus-within {
+  border-color: var(--brand-primary) !important;
+  /* Cybernetic hollow light ring: a distinct floating outline that glows beautifully with a gap */
+  box-shadow: 
+    0 0 0 3px var(--bg-app), 
+    0 0 0 5.5px var(--brand-primary), 
+    0 0 15px rgba(55, 27, 242, 0.2) !important;
+}
+
+/* ==========================================
+   PROMPT COACH THINKING ANIMATION
+   ========================================== */
+
+@keyframes coach-gradient-spin {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.prompt-coach-gradient-border {
+  position: relative;
+  z-index: 1;
+}
+
+.prompt-coach-gradient-border::before {
+  content: "";
+  position: absolute;
+  top: -1.5px;
+  left: -1.5px;
+  right: -1.5px;
+  bottom: -1.5px;
+  z-index: -1;
+  border-radius: 17px; /* 16px + 1px spacing */
+  background: linear-gradient(135deg, #1711BF, #371BF2, #705FD9, #9C8BD9);
+  background-size: 250% 250%;
+  animation: coach-gradient-spin 5s ease infinite;
+}
+
+/* Custom glass overlays */
+.custom-glass,
+.custom-glass-cyber {
+  background: rgba(255, 255, 255, 0.8) !important;
+  border-color: rgba(0, 0, 0, 0.06) !important;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.02) !important;
+}
+
+:root:not(.light) .custom-glass,
+:not(.light) .custom-glass-cyber {
+  background: rgba(20, 26, 46, 0.85) !important;
+  border-color: rgba(255, 255, 255, 0.05) !important;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Clean UI margins & scrollers */
+.light ::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.12);
+}
+.light ::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.22);
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.no-scrollbar::-webkit-scrollbar {
+  display: none !important;
+}
+/* Hide scrollbar for IE, Edge and Firefox */
+.no-scrollbar {
+  -ms-overflow-style: none !important;  /* IE and Edge */
+  scrollbar-width: none !important;  /* Firefox */
+}
+
+
