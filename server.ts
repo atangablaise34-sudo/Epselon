@@ -29,7 +29,10 @@ dotenv.config();
 
 const app = express();
 const PORT = 3000;
-const DATA_FILE = path.join(process.cwd(), "data.json");
+const IS_VERCEL = Boolean(process.env.VERCEL);
+const DATA_FILE = IS_VERCEL
+  ? path.join("/tmp", "data.json")
+  : path.join(process.cwd(), "data.json");
 
 // Parse request bodies
 app.use(express.json({ limit: "10mb" }));
@@ -397,8 +400,11 @@ function loadDb() {
     if (fs.existsSync(DATA_FILE)) {
       const data = fs.readFileSync(DATA_FILE, "utf-8");
       db = JSON.parse(data);
+    } else if (fs.existsSync(path.join(process.cwd(), "data.json"))) {
+      const data = fs.readFileSync(path.join(process.cwd(), "data.json"), "utf-8");
+      db = JSON.parse(data);
     } else {
-      fs.writeFileSync(DATA_FILE, JSON.stringify(defaultDb, null, 2), "utf-8");
+      db = { ...defaultDb };
     }
   } catch (err) {
     console.error("Error loading database file, resetting to default.", err);
@@ -410,7 +416,7 @@ function saveDb() {
   try {
     fs.writeFileSync(DATA_FILE, JSON.stringify(db, null, 2), "utf-8");
   } catch (err) {
-    console.error("Error saving database file", err);
+    console.warn("Could not persist database file (non-fatal, e.g. read-only filesystem); keeping in memory.", err);
   }
 }
 
@@ -2144,6 +2150,11 @@ When grading university scripts on **${topic}**, examiners look closely at your 
 
 // Vite middleware / Production routing setup
 async function startServer() {
+  if (IS_VERCEL) {
+    // Vercel serverless functions handle request routing automatically
+    return;
+  }
+
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
       server: { middlewareMode: true },
@@ -2166,3 +2177,5 @@ async function startServer() {
 startServer().catch((err) => {
   console.error("Failed to boot full-stack server", err);
 });
+
+export default app;
