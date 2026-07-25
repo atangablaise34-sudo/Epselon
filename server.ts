@@ -395,6 +395,14 @@ const defaultDb: DatabaseSchema = {
 // Database persistence logic
 let db: DatabaseSchema = { ...defaultDb };
 
+function ensureDb() {
+  if (!db) db = { ...defaultDb };
+  if (!db.users) db.users = {};
+  if (!db.sessions) db.sessions = {};
+  if (!db.collections) db.collections = {};
+  if (!db.flashcards) db.flashcards = {};
+}
+
 function loadDb() {
   try {
     if (fs.existsSync(DATA_FILE)) {
@@ -404,12 +412,13 @@ function loadDb() {
       const data = fs.readFileSync(path.join(process.cwd(), "data.json"), "utf-8");
       db = JSON.parse(data);
     } else {
-      db = { ...defaultDb };
+      db = JSON.parse(JSON.stringify(defaultDb));
     }
   } catch (err) {
     console.error("Error loading database file, resetting to default.", err);
-    db = { ...defaultDb };
+    db = JSON.parse(JSON.stringify(defaultDb));
   }
+  ensureDb();
 }
 
 function saveDb() {
@@ -651,7 +660,8 @@ app.get("/api/auth/session", async (req, res) => {
 
 app.post("/api/auth/register", async (req, res) => {
   try {
-    const { fullName, email, password, country, university, faculty, department, academicLevel, preferredLanguage } = req.body;
+    ensureDb();
+    const { fullName, email, password, country, university, faculty, department, academicLevel, preferredLanguage } = req.body || {};
     if (!email || !fullName || !password) {
       return res.status(400).json({ error: "Missing primary registration fields" });
     }
@@ -660,62 +670,68 @@ app.post("/api/auth/register", async (req, res) => {
     let requiresVerification = false;
       
     if (supabase) {
-      // 1. Create user in Supabase Auth with email_confirm: false so verification is strictly required!
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email,
-        password,
-        email_confirm: false,
-        user_metadata: { full_name: fullName }
-      });
-
-      if (authError) {
-        return res.status(400).json({ error: authError.message });
-      }
-
-      userId = authData.user.id;
-      requiresVerification = true;
-
-      // Trigger verification email resend/send via Supabase
       try {
-        await supabase.auth.resend({
-          type: "signup",
-          email
-        });
-      } catch (e) {
-        console.warn("Resend email notification trigger notice:", e);
-      }
-
-      // 2. Insert into public.users
-      try {
-        await supabase.from("users").insert([{
-          id: userId,
+        // 1. Create user in Supabase Auth with email_confirm: false so verification is strictly required!
+        const { data: authData, error: authError } = await supabase.auth.admin.createUser({
           email,
-          full_name: fullName,
-          country: country || "United States",
-          university: university || "Stanford University",
-          faculty: faculty || "Sciences",
-          department: department || "Physics",
-          academic_level: academicLevel || "PhD Candidate",
-          preferred_language: preferredLanguage || "English",
-          learning_style: "Visual",
-          weekly_commitment: "5-10",
-          learning_objectives: "",
-          mastery_progress: 0,
-          learning_streak: 1,
-          cards_mastered: 0,
-          total_cards: 0,
-          preferences: {
-            theme: "obsidian",
-            accentColor: "blue",
-            fontSize: "100%",
-            teachingStyle: "Socratic",
-            cognitiveLoad: "Proficient",
-            taxonomyFocus: "Analyze & Evaluate",
-            contextAwareness: true,
-          }
-        }]);
-      } catch (profileErr) {
-        console.warn("Public.users table insert warning (will fallback to local profile if table absent):", profileErr);
+          password,
+          email_confirm: false,
+          user_metadata: { full_name: fullName }
+        });
+
+        if (authError) {
+          return res.status(400).json({ error: authError.message });
+        }
+
+        if (authData?.user) {
+          userId = authData.user.id;
+          requiresVerification = true;
+        }
+
+        // Trigger verification email resend/send via Supabase
+        try {
+          await supabase.auth.resend({
+            type: "signup",
+            email
+          });
+        } catch (e) {
+          console.warn("Resend email notification trigger notice:", e);
+        }
+
+        // 2. Insert into public.users
+        try {
+          await supabase.from("users").insert([{
+            id: userId,
+            email,
+            full_name: fullName,
+            country: country || "United States",
+            university: university || "Stanford University",
+            faculty: faculty || "Sciences",
+            department: department || "Physics",
+            academic_level: academicLevel || "PhD Candidate",
+            preferred_language: preferredLanguage || "English",
+            learning_style: "Visual",
+            weekly_commitment: "5-10",
+            learning_objectives: "",
+            mastery_progress: 0,
+            learning_streak: 1,
+            cards_mastered: 0,
+            total_cards: 0,
+            preferences: {
+              theme: "obsidian",
+              accentColor: "blue",
+              fontSize: "100%",
+              teachingStyle: "Socratic",
+              cognitiveLoad: "Proficient",
+              taxonomyFocus: "Analyze & Evaluate",
+              contextAwareness: true,
+            }
+          }]);
+        } catch (profileErr) {
+          console.warn("Public.users table insert warning:", profileErr);
+        }
+      } catch (sbErr: any) {
+        console.warn("Supabase auth integration warning:", sbErr?.message || sbErr);
       }
     }
 

@@ -2,12 +2,38 @@ import { UserProfile, UserPreferences, ProviderConnection, StudySession, ChatMes
 
 const API_BASE = ""; // Relative routes since we're using Vite's server proxy
 
+async function parseApiResponse<T = any>(res: Response, defaultErrorMsg: string): Promise<T> {
+  const contentType = res.headers.get("content-type") || "";
+  let data: any = {};
+
+  if (contentType.includes("application/json")) {
+    try {
+      data = await res.json();
+    } catch {
+      data = { error: "Invalid JSON payload returned from server" };
+    }
+  } else {
+    const text = await res.text();
+    // If response is HTML or text error message
+    data = { error: text ? (text.length > 180 ? `${text.substring(0, 180)}...` : text) : defaultErrorMsg };
+  }
+
+  if (!res.ok) {
+    const error: any = new Error(data.error || data.message || `${defaultErrorMsg} (HTTP ${res.status})`);
+    error.requiresVerification = data.requiresVerification;
+    error.email = data.email;
+    throw error;
+  }
+
+  return data as T;
+}
+
 export async function fetchSession(): Promise<UserProfile | null> {
   try {
     const res = await fetch(`${API_BASE}/api/auth/session`);
     if (!res.ok) return null;
-    const data = await res.json();
-    return data.user;
+    const data = await parseApiResponse(res, "Failed to fetch session");
+    return data.user || null;
   } catch {
     return null;
   }
@@ -26,14 +52,7 @@ export async function loginUser(email: string, password: string): Promise<AuthRe
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
   });
-  const data = await res.json();
-  if (!res.ok) {
-    const error: any = new Error(data.error || "Failed to log in");
-    error.requiresVerification = data.requiresVerification;
-    error.email = data.email || email;
-    throw error;
-  }
-  return data;
+  return parseApiResponse<AuthResponse>(res, "Failed to log in");
 }
 
 export async function registerUser(payload: Partial<UserProfile> & { password?: string }): Promise<AuthResponse> {
@@ -42,14 +61,7 @@ export async function registerUser(payload: Partial<UserProfile> & { password?: 
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  const data = await res.json();
-  if (!res.ok) {
-    const error: any = new Error(data.error || "Failed to register");
-    error.requiresVerification = data.requiresVerification;
-    error.email = data.email || payload.email;
-    throw error;
-  }
-  return data;
+  return parseApiResponse<AuthResponse>(res, "Failed to register");
 }
 
 export async function resendVerificationEmail(email: string): Promise<{ message: string }> {
@@ -58,11 +70,7 @@ export async function resendVerificationEmail(email: string): Promise<{ message:
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email }),
   });
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data.error || "Failed to resend verification email");
-  }
-  return data;
+  return parseApiResponse<{ message: string }>(res, "Failed to resend verification email");
 }
 
 export async function logoutUser(): Promise<void> {
@@ -75,11 +83,7 @@ export async function saveOnboarding(payload: Partial<UserProfile>): Promise<Use
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  if (!res.ok) {
-    const err = await res.json();
-    throw new Error(err.error || "Failed to save cognitive profile");
-  }
-  const data = await res.json();
+  const data = await parseApiResponse<{ user: UserProfile }>(res, "Failed to save cognitive profile");
   return data.user;
 }
 
@@ -89,11 +93,7 @@ export async function updatePreferences(prefs: Partial<UserPreferences>): Promis
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(prefs),
   });
-  if (!res.ok) {
-    const err = await res.json();
-    throw new Error(err.error || "Failed to update preferences");
-  }
-  const data = await res.json();
+  const data = await parseApiResponse<{ preferences: UserPreferences }>(res, "Failed to update preferences");
   return data.preferences;
 }
 
@@ -103,18 +103,13 @@ export async function updateProviders(providers: ProviderConnection[]): Promise<
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ providers }),
   });
-  if (!res.ok) {
-    const err = await res.json();
-    throw new Error(err.error || "Failed to update providers");
-  }
-  return res.json();
+  return parseApiResponse<{ providers: ProviderConnection[], user: UserProfile }>(res, "Failed to update providers");
 }
 
 export async function fetchStudySessions(): Promise<StudySession[]> {
   const res = await fetch(`${API_BASE}/api/study/sessions`);
-  if (!res.ok) throw new Error("Failed to fetch sessions");
-  const data = await res.json();
-  return data.sessions;
+  const data = await parseApiResponse<{ sessions: StudySession[] }>(res, "Failed to fetch sessions");
+  return data.sessions || [];
 }
 
 export async function createStudySession(title: string, focus: string, difficulty: string): Promise<StudySession> {
@@ -123,8 +118,7 @@ export async function createStudySession(title: string, focus: string, difficult
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ title, focus, difficulty }),
   });
-  if (!res.ok) throw new Error("Failed to create study session");
-  const data = await res.json();
+  const data = await parseApiResponse<{ session: StudySession }>(res, "Failed to create study session");
   return data.session;
 }
 
@@ -134,8 +128,7 @@ export async function sendChatMessage(sessionId: string, messageText: string, is
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ sessionId, messageText, isConversational }),
   });
-  if (!res.ok) throw new Error("Failed to send message to Educational Intelligence Layer");
-  const data = await res.json();
+  const data = await parseApiResponse<{ session: StudySession }>(res, "Failed to send message");
   return data.session;
 }
 
@@ -151,8 +144,7 @@ export async function enhancePrompt(originalPrompt: string, topic: string, sessi
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ originalPrompt, topic, sessionId }),
   });
-  if (!res.ok) throw new Error("Failed to assemble educational context");
-  const data = await res.json();
+  const data = await parseApiResponse<any>(res, "Failed to assemble educational context");
   return {
     enhancedPrompt: data.enhancedPrompt || originalPrompt,
     isConversational: !!data.isConversational,
@@ -168,8 +160,7 @@ export async function clearStudySession(sessionId: string): Promise<StudySession
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ sessionId }),
   });
-  if (!res.ok) throw new Error("Failed to clear study session");
-  const data = await res.json();
+  const data = await parseApiResponse<{ session: StudySession }>(res, "Failed to clear study session");
   return data.session;
 }
 
@@ -179,15 +170,13 @@ export async function updateSessionIntent(sessionId: string, intent: string): Pr
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ sessionId, intent }),
   });
-  if (!res.ok) throw new Error("Failed to update session intent");
-  const data = await res.json();
+  const data = await parseApiResponse<{ session: StudySession }>(res, "Failed to update session intent");
   return data.session;
 }
 
 export async function fetchFlashcards(): Promise<{ collections: FlashcardCollection[]; flashcards: Flashcard[] }> {
   const res = await fetch(`${API_BASE}/api/flashcards`);
-  if (!res.ok) throw new Error("Failed to fetch flashcards");
-  return res.json();
+  return parseApiResponse<{ collections: FlashcardCollection[]; flashcards: Flashcard[] }>(res, "Failed to fetch flashcards");
 }
 
 export async function submitCardReview(cardId: string, result: "easy" | "medium" | "hard"): Promise<void> {
@@ -196,7 +185,7 @@ export async function submitCardReview(cardId: string, result: "easy" | "medium"
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ cardId, result }),
   });
-  if (!res.ok) throw new Error("Failed to submit card review");
+  await parseApiResponse(res, "Failed to submit card review");
 }
 
 export async function updateUserProfile(payload: {
@@ -214,7 +203,6 @@ export async function updateUserProfile(payload: {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  if (!res.ok) throw new Error("Failed to update academic profile");
-  return res.json();
+  return parseApiResponse<{ success: boolean; user: UserProfile }>(res, "Failed to update academic profile");
 }
 
