@@ -16,7 +16,6 @@ import FlashcardLibrary from "./features/flashcards/FlashcardLibrary";
 import SettingsView from "./features/settings/SettingsView";
 import OnboardingView from "./features/onboarding/OnboardingView";
 import GradientMenu from "../components/ui/gradient-menu";
-import TeacherDashboardView from "./features/teacher/TeacherDashboardView";
 import RadialPulseLoader from "../components/ui/loading-animation";
 import WorkspaceMascot from "./components/WorkspaceMascot";
 import GraphWatermark from "./components/GraphWatermark";
@@ -30,7 +29,7 @@ export default function App() {
 
   
   // Navigation
-  const [currentRoute, setCurrentRoute] = useState<"workspace" | "nexus" | "flashcards" | "settings" | "teacher">("workspace");
+  const [currentRoute, setCurrentRoute] = useState<"workspace" | "nexus" | "flashcards" | "settings">("settings");
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
 
   // Cached academic resources
@@ -58,11 +57,8 @@ export default function App() {
       }
     }
     
-    // Brief delay to align with splash completion
-    if (!showSplash) {
-      checkAuth();
-    }
-  }, [showSplash]);
+    checkAuth();
+  }, []);
 
   // Load all user's academic items
   const loadAcademicData = async () => {
@@ -92,6 +88,7 @@ export default function App() {
 
   const handleAuthSuccess = async (authenticatedUser: UserProfile) => {
     setUser(authenticatedUser);
+    setCurrentRoute("settings");
     try {
       await loadAcademicData();
     } catch (err) {
@@ -194,7 +191,7 @@ export default function App() {
       <OnboardingView 
         user={user} 
         onRefreshUser={handleRefreshUser} 
-        onComplete={() => setCurrentRoute("workspace")} 
+        onComplete={() => setCurrentRoute("settings")} 
       />
     );
   }
@@ -279,18 +276,6 @@ export default function App() {
                 <SettingsView user={user} onRefreshUser={loadAcademicData} onLogout={handleLogout} />
               </motion.div>
             )}
-
-            {currentRoute === "teacher" && (
-              <motion.div
-                key="teacher"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.2 }}
-              >
-                <TeacherDashboardView user={user} />
-              </motion.div>
-            )}
           </AnimatePresence>
         </main>
 
@@ -304,6 +289,7 @@ export default function App() {
                 setPassedTopicFromNexus(undefined);
               }} 
               theme={activeTheme}
+              language={user.preferences?.language || user.preferredLanguage || "en"}
             />
           </div>
         </div>

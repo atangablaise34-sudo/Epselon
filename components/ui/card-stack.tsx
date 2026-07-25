@@ -117,6 +117,19 @@ export function CardStack<T extends CardStackItem>({
   renderCard,
 }: CardStackProps<T>) {
   const reduceMotion = useReducedMotion();
+  const [containerWidth, setContainerWidth] = React.useState<number>(
+    typeof window !== "undefined" ? window.innerWidth : 600
+  );
+
+  React.useEffect(() => {
+    const handleResize = () => {
+      setContainerWidth(window.innerWidth);
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   const len = items.length;
 
   const [active, setActive] = React.useState(() =>
@@ -135,9 +148,15 @@ export function CardStack<T extends CardStackItem>({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active]);
 
+  // Responsive card sizing for mobile screens
+  const maxCardW = Math.min(cardWidth, containerWidth - 32);
+  const effectiveCardWidth = Math.max(250, maxCardW);
+  const scaleRatio = effectiveCardWidth / cardWidth;
+  const effectiveCardHeight = Math.max(170, Math.round(cardHeight * scaleRatio));
+
   const maxOffset = Math.max(0, Math.floor(maxVisible / 2));
 
-  const cardSpacing = Math.max(10, Math.round(cardWidth * (1 - overlap)));
+  const cardSpacing = Math.max(8, Math.round(effectiveCardWidth * (1 - overlap)));
   const stepDeg = maxOffset > 0 ? spreadDeg / maxOffset : 0;
 
   const canGoPrev = loop || active > 0;
@@ -154,6 +173,21 @@ export function CardStack<T extends CardStackItem>({
     if (!canGoNext) return;
     setActive((a) => wrapIndex(a + 1, len));
   }, [canGoNext, len]);
+
+  // Mouse wheel & touchpad scroll navigation
+  const wheelCooldownRef = React.useRef(false);
+  const handleWheel = (e: React.WheelEvent) => {
+    if (wheelCooldownRef.current) return;
+    const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+    if (Math.abs(delta) > 15) {
+      if (delta > 0) next();
+      else prev();
+      wheelCooldownRef.current = true;
+      setTimeout(() => {
+        wheelCooldownRef.current = false;
+      }, 300);
+    }
+  };
 
   // keyboard navigation (when container focused)
   const onKeyDown = (e: React.KeyboardEvent) => {
@@ -201,9 +235,10 @@ export function CardStack<T extends CardStackItem>({
       {/* Stage */}
       <div
         className="relative w-full outline-none"
-        style={{ height: Math.max(380, cardHeight + 80) }}
+        style={{ height: Math.max(260, effectiveCardHeight + 70) }}
         tabIndex={0}
         onKeyDown={onKeyDown}
+        onWheel={handleWheel}
       >
         {/* background wash / spotlight (unique feel) */}
         <div
@@ -258,7 +293,7 @@ export function CardStack<T extends CardStackItem>({
                       if (reduceMotion) return;
                       const travel = info.offset.x;
                       const v = info.velocity.x;
-                      const threshold = Math.min(160, cardWidth * 0.22);
+                      const threshold = Math.min(160, effectiveCardWidth * 0.22);
 
                       // swipe logic
                       if (travel > threshold || v > 650) prev();
@@ -278,8 +313,8 @@ export function CardStack<T extends CardStackItem>({
                       : "cursor-pointer",
                   )}
                   style={{
-                    width: cardWidth,
-                    height: cardHeight,
+                    width: effectiveCardWidth,
+                    height: effectiveCardHeight,
                     zIndex,
                     transformStyle: "preserve-3d",
                   }}

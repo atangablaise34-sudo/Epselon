@@ -5,7 +5,7 @@ import {
   Brain, Settings, GraduationCap, Globe, CheckCircle, Lightbulb, Sparkles
 } from "lucide-react";
 import { UserProfile } from "../../types";
-import { loginUser, registerUser, saveOnboarding } from "../../lib/api";
+import { loginUser, registerUser, saveOnboarding, resendVerificationEmail } from "../../lib/api";
 import RadialPulseLoader from "../../../components/ui/loading-animation";
 import EpselonLogo from "../../components/EpselonLogo";
 
@@ -13,7 +13,7 @@ interface AuthFlowProps {
   onAuthComplete: (user: UserProfile) => void;
 }
 
-type Mode = "landing" | "login" | "register" | "onboarding";
+type Mode = "landing" | "login" | "register" | "onboarding" | "verification-pending";
 type OnboardingStep = 1 | 2 | 3;
 
 // Elegant page transition
@@ -27,6 +27,9 @@ export default function AuthFlow({ onAuthComplete }: AuthFlowProps) {
   const [mode, setMode] = useState<Mode>("landing");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [unverifiedEmail, setUnverifiedEmail] = useState<string>("");
+  const [resending, setResending] = useState(false);
+  const [resendMessage, setResendMessage] = useState<string | null>(null);
 
   // Auth form states
   const [fullName, setFullName] = useState("");
@@ -55,10 +58,17 @@ export default function AuthFlow({ onAuthComplete }: AuthFlowProps) {
     setError(null);
     setLoading(true);
     try {
-      const user = await loginUser(email, password);
-      onAuthComplete(user);
+      const res = await loginUser(email, password);
+      if (res.user) {
+        onAuthComplete(res.user);
+      }
     } catch (err: any) {
-      setError(err.message || "Failed to authenticate. Please check credentials.");
+      if (err.requiresVerification) {
+        setUnverifiedEmail(err.email || email);
+        setMode("verification-pending");
+      } else {
+        setError(err.message || "Failed to authenticate. Please check credentials.");
+      }
     } finally {
       setLoading(false);
     }
@@ -73,7 +83,7 @@ export default function AuthFlow({ onAuthComplete }: AuthFlowProps) {
     }
     setLoading(true);
     try {
-      const user = await registerUser({
+      const res = await registerUser({
         fullName,
         email,
         password,
@@ -84,13 +94,40 @@ export default function AuthFlow({ onAuthComplete }: AuthFlowProps) {
         department,
         academicLevel,
       });
-      setTempUser(user);
-      setMode("onboarding");
-      setOnboardStep(1);
+
+      if (res.requiresVerification) {
+        setUnverifiedEmail(email);
+        setMode("verification-pending");
+      } else if (res.user) {
+        setTempUser(res.user);
+        setMode("onboarding");
+        setOnboardStep(1);
+      }
     } catch (err: any) {
-      setError(err.message || "Email might already be registered");
+      if (err.requiresVerification) {
+        setUnverifiedEmail(email);
+        setMode("verification-pending");
+      } else {
+        setError(err.message || "Email might already be registered");
+      }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    const targetEmail = unverifiedEmail || email;
+    if (!targetEmail) return;
+    setResending(true);
+    setError(null);
+    setResendMessage(null);
+    try {
+      const res = await resendVerificationEmail(targetEmail);
+      setResendMessage(res.message || `Verification email resent to ${targetEmail}`);
+    } catch (err: any) {
+      setError(err.message || "Failed to resend verification email.");
+    } finally {
+      setResending(false);
     }
   };
 
@@ -173,7 +210,7 @@ export default function AuthFlow({ onAuthComplete }: AuthFlowProps) {
               </h1>
 
               <p className="text-slate-400 text-base md:text-lg leading-relaxed max-w-xl mb-12 font-sans font-light">
-                Join the exclusive intelligence layer for higher education. Epselon integrates Socratic mentorship, spaced repetition, and deep conceptual mapping.
+                Join the exclusive intelligence layer for higher education. Epselon integrates guided AI mentorship, spaced repetition, and deep conceptual mapping.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4 w-full justify-center max-w-md mb-8">
@@ -422,6 +459,69 @@ export default function AuthFlow({ onAuthComplete }: AuthFlowProps) {
             </motion.div>
           )}
 
+          {mode === "verification-pending" && (
+            <motion.div
+              key="verification-pending"
+              variants={pageVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              className="w-full max-w-md"
+            >
+              <div className="bg-[#141A2E]/90 p-8 md:p-10 rounded-3xl border border-[#371BF2]/30 backdrop-blur-2xl shadow-2xl relative overflow-hidden text-center">
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-32 bg-[#371BF2]/20 blur-[60px] pointer-events-none" />
+                
+                <div className="w-16 h-16 rounded-2xl bg-[#371BF2]/20 border border-[#371BF2]/40 flex items-center justify-center mx-auto mb-6 relative z-10">
+                  <Mail className="w-8 h-8 text-[#9C8BD9] animate-pulse" />
+                </div>
+
+                <h2 className="font-serif italic text-3xl text-white font-medium mb-2 relative z-10">Verify Your Email</h2>
+                <p className="text-slate-300 text-sm mb-4 relative z-10 leading-relaxed">
+                  A verification link has been sent to <br />
+                  <span className="font-mono text-emerald-400 font-medium">{unverifiedEmail || email}</span>
+                </p>
+                <p className="text-slate-400 text-xs mb-8 relative z-10">
+                  Please check your email inbox (and spam folder) and click the confirmation link to activate your account before logging in.
+                </p>
+
+                {resendMessage && (
+                  <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-xs text-emerald-300 mb-6 font-mono relative z-10">
+                    {resendMessage}
+                  </div>
+                )}
+
+                {error && (
+                  <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-xs text-red-400 mb-6 font-mono relative z-10">
+                    {error}
+                  </div>
+                )}
+
+                <div className="space-y-3 relative z-10">
+                  <button
+                    type="button"
+                    onClick={handleResendVerification}
+                    disabled={resending}
+                    className="w-full bg-[#371BF2] hover:bg-[#1711BF] disabled:opacity-50 py-3.5 rounded-xl text-xs text-white font-semibold transition-all flex items-center justify-center gap-2 border border-white/10 shadow-lg cursor-pointer"
+                  >
+                    {resending ? "Resending Email..." : "Resend Verification Email"}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setError(null);
+                      setResendMessage(null);
+                      setMode("login");
+                    }}
+                    className="w-full bg-[#0B1020]/60 hover:bg-[#0B1020] text-slate-300 py-3 rounded-xl text-xs font-mono transition-colors border border-white/10 cursor-pointer"
+                  >
+                    Back to Sign In
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
           {mode === "onboarding" && (
             <motion.div
               key="onboarding"
@@ -499,7 +599,7 @@ export default function AuthFlow({ onAuthComplete }: AuthFlowProps) {
                       <label className="block text-xs font-mono text-slate-400 uppercase tracking-wider mb-4">Mentor Dialectic</label>
                       <div className="space-y-3">
                         {[
-                          { id: "Socratic", name: "Socratic Discourse", desc: "Guided inquiry and probing questions" },
+                          { id: "Socratic", name: "Guided AI Inquiry", desc: "Guided inquiry and probing questions" },
                           { id: "Explanatory", name: "Explanatory Narrative", desc: "Direct, comprehensive explanations" },
                           { id: "Practical", name: "Practical Sandbox", desc: "Application-first, hands-on focus" },
                           { id: "Theoretical", name: "Theoretical Axioms", desc: "First-principles mathematical focus" },

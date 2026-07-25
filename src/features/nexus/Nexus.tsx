@@ -7,6 +7,7 @@ import {
   Plus, Minus, Maximize
 } from "lucide-react";
 import { UserProfile } from "../../types";
+import MathFormula from "../../components/MathFormula";
 
 interface NexusProps {
   user: UserProfile;
@@ -756,10 +757,10 @@ export default function Nexus({ user, onLaunchTopic }: NexusProps) {
         <div>
           <h2 className="font-serif italic text-2xl text-white font-medium flex items-center gap-2">
             <Network className="w-6 h-6 text-blue-500 stroke-[1.5]" />
-            Educational Intelligence Layer
+            Interactive Knowledge Map
           </h2>
           <p className="text-xs text-slate-400 mt-1">
-            Redesigned Knowledge Object topology tracking concepts, aliases, prerequisites, and multi-disciplinary contexts.
+            Explore connected subjects, view prerequisites, and launch guided AI study sessions.
           </p>
         </div>
 
@@ -778,20 +779,20 @@ export default function Nexus({ user, onLaunchTopic }: NexusProps) {
       </div>
 
       {/* Physics controls & state togglers */}
-      <div className="flex flex-wrap items-center justify-between gap-4 p-4 rounded-xl bg-[#090c15]/60 border border-slate-900/80">
-        <div className="flex items-center gap-2 text-xs font-mono text-slate-400">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-400">Continuous Knowledge Object Map</span>
+      <div className="flex flex-col min-[480px]:flex-row min-[480px]:items-center justify-between gap-2.5 sm:gap-4 p-3 sm:p-4 rounded-xl bg-[#090c15]/60 border border-slate-900/80 w-full max-w-full overflow-hidden">
+        <div className="flex items-center gap-2 text-xs font-mono text-slate-400 shrink-0">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+          <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-400 truncate">Continuous Knowledge Object Map</span>
         </div>
 
-        <div className="flex gap-1.5">
+        <div className="flex flex-wrap items-center gap-1 sm:gap-1.5 max-w-full">
           {nodes.slice(0, 4).map((n) => (
             <button
               key={n.id}
               onClick={() => setSelectedNode(n)}
-              className={`px-2.5 py-1 rounded text-[10px] font-mono transition-all ${
+              className={`px-2 py-0.5 sm:px-2.5 sm:py-1 rounded text-[9px] sm:text-[10px] font-mono transition-all truncate max-w-[100px] sm:max-w-none ${
                 selectedNode?.id === n.id
-                  ? "bg-blue-600/10 border border-blue-500/30 text-blue-400"
+                  ? "bg-blue-600/10 border border-blue-500/30 text-blue-400 font-bold"
                   : "bg-slate-950 border border-slate-800 text-slate-500 hover:text-slate-300"
               }`}
             >
@@ -806,7 +807,7 @@ export default function Nexus({ user, onLaunchTopic }: NexusProps) {
         {/* Network Graph Frame */}
         <div
           ref={containerRef}
-          className="lg:col-span-2 relative h-[420px] rounded-xl border border-[#2c2c2c] bg-[#1c1c1c] overflow-hidden shadow-inner select-none"
+          className="lg:col-span-2 relative h-[320px] sm:h-[420px] rounded-xl border border-[#2c2c2c] bg-[#1c1c1c] overflow-hidden shadow-inner select-none w-full max-w-full"
         >
           <canvas
             ref={canvasRef}
@@ -964,14 +965,9 @@ export default function Nexus({ user, onLaunchTopic }: NexusProps) {
                       <span className="block text-[9px] font-mono text-slate-500 uppercase tracking-wider flex items-center gap-1">
                         <Flame className="w-3 h-3 text-blue-400" /> Extracted Formal Axioms
                       </span>
-                      <div className="space-y-1">
+                      <div className="space-y-1.5">
                         {selectedNode.equations.map((eq, idx) => (
-                          <div 
-                            key={idx} 
-                            className="p-2 rounded bg-slate-950 border border-slate-900 font-mono text-slate-300 text-[10px] break-all text-center flex flex-col items-center justify-center gap-1"
-                          >
-                            <span className="text-blue-400">{eq}</span>
-                          </div>
+                          <MathFormula key={idx} latex={eq} showCopyButton={false} className="p-2" />
                         ))}
                       </div>
                     </div>
@@ -1016,7 +1012,7 @@ export default function Nexus({ user, onLaunchTopic }: NexusProps) {
                 <div className="space-y-4 animate-fade-in text-xs max-h-[250px] overflow-y-auto pr-1">
                   <div className="p-3.5 rounded-lg border border-purple-900/20 bg-purple-950/5 space-y-2">
                     <span className="text-[8px] font-mono uppercase tracking-widest text-purple-400 font-bold flex items-center gap-1">
-                      <Target className="w-3 h-3 text-purple-400 animate-pulse" /> Socratic Checkpoint
+                      <Target className="w-3 h-3 text-purple-400 animate-pulse" /> Knowledge Checkpoint
                     </span>
                     <p className="text-[11px] text-slate-300 leading-relaxed font-light">
                       "Explicate the core intellectual model and systems boundaries of {selectedNode.canonicalName || selectedNode.label}."
@@ -1136,7 +1132,7 @@ export default function Nexus({ user, onLaunchTopic }: NexusProps) {
               className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
             >
               <Play className="w-3.5 h-3.5 fill-current" />
-              Initiate Socratic Discourse
+              Start Guided AI Study Session
             </button>
           )}
         </div>

@@ -339,7 +339,7 @@ export default function FocusModeOverlay({
         >
           <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
           <span className="text-[10px] font-mono tracking-widest text-slate-400 uppercase font-semibold">
-            Socratic Continuous Session
+            Continuous Study Session
           </span>
         </motion.div>
       </div>
@@ -397,7 +397,7 @@ export default function FocusModeOverlay({
               className="text-center select-none"
             >
               <div className="text-xs font-mono text-indigo-400 tracking-widest uppercase font-bold animate-pulse">
-                Engaging Socratic Pipeline...
+                Connecting AI Study Session...
               </div>
             </motion.div>
           )}
@@ -422,7 +422,7 @@ export default function FocusModeOverlay({
 
               <div className="flex items-center justify-between border-b border-slate-900 pb-2 mb-2 select-none">
                 <span className="text-[10px] font-mono tracking-widest uppercase text-slate-400 font-bold">
-                  Socratic Explanation
+                  Guided AI Explanation
                 </span>
                 <span className="text-[10px] font-mono text-slate-500 font-bold">
                   Sentence {currentSentenceIndex + 1} of {sentences.length}

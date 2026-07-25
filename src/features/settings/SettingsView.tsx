@@ -1,22 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "motion/react";
 import { 
-  Settings2, Eye, Sliders, Type, Database, User, Globe, 
+  Settings2, Eye, Sliders, Type, User, Globe, 
   Sparkles, ShieldAlert, Cpu, Check, HelpCircle, Save,
-  Volume2, LogOut
+  Volume2, LogOut, KeyRound, ShieldCheck
 } from "lucide-react";
 import { UserProfile, UserPreferences, ProviderConnection } from "../../types";
 import { updatePreferences, updateProviders, updateUserProfile } from "../../lib/api";
 import { NIMO_VOICES, voiceService } from "../../lib/VoiceService";
-
-const PROVIDERS_LIST = [
-  { id: "gemini", name: "Gemini", desc: "Google's deep multimodal reasoning.", color: "text-blue-400" },
-  { id: "chatgpt", name: "ChatGPT", desc: "OpenAI's state-of-the-art agent.", color: "text-emerald-400" },
-  { id: "claude", name: "Claude", desc: "Anthropic's safety-first engine.", color: "text-amber-400" },
-  { id: "deepseek", name: "DeepSeek", desc: "Efficient mathematical reasoning.", color: "text-indigo-400" },
-  { id: "grok", name: "Grok", desc: "Real-time knowledge synthesizer.", color: "text-pink-400" },
-  { id: "perplexity", name: "Perplexity", desc: "Deep research and search.", color: "text-cyan-400" }
-];
+import AIKeyConnectModal, { PROVIDERS_CONFIG, ProviderConfig } from "../../components/AIKeyConnectModal";
 
 interface SettingsViewProps {
   user: UserProfile;
@@ -38,6 +30,7 @@ export default function SettingsView({ user, onRefreshUser, onLogout }: Settings
   const [taxonomyFocus, setTaxonomyFocus] = useState<UserPreferences["taxonomyFocus"]>(user.preferences?.taxonomyFocus || "Analyze & Evaluate");
   const [contextAwareness, setContextAwareness] = useState<UserPreferences["contextAwareness"]>(user.preferences?.contextAwareness ?? true);
   const [selectedVoiceId, setSelectedVoiceId] = useState<string>(user.preferences?.selectedVoiceId || "nimo-female-1");
+  const [appLanguage, setAppLanguage] = useState<"en" | "fr">((user.preferences?.language || user.preferredLanguage || "en") as "en" | "fr");
 
   // Editable Profile States
   const [fullName, setFullName] = useState<string>(user.fullName || "");
@@ -52,11 +45,13 @@ export default function SettingsView({ user, onRefreshUser, onLogout }: Settings
   // Provider states
   const [providers, setProviders] = useState<ProviderConnection[]>(user.providers || []);
   const [selectedProvider, setSelectedProvider] = useState<string>(user.preferences?.selectedProvider || "gemini");
+  const [selectedModalProvider, setSelectedModalProvider] = useState<ProviderConfig | null>(null);
 
   useEffect(() => {
     setProviders(user.providers || []);
     setSelectedProvider(user.preferences?.selectedProvider || "gemini");
     setSelectedVoiceId(user.preferences?.selectedVoiceId || "nimo-female-1");
+    setAppLanguage((user.preferences?.language || user.preferredLanguage || "en") as "en" | "fr");
 
     setFullName(user.fullName || "");
     setUniversity(user.university || "");
@@ -67,6 +62,66 @@ export default function SettingsView({ user, onRefreshUser, onLogout }: Settings
     setWeeklyCommitment(user.weeklyCommitment || "5-10");
     setLearningObjectives(user.learningObjectives || "");
   }, [user]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const el = document.getElementById("academic-prompt-profile");
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }, 150);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const handleOpenProviderModal = (config: ProviderConfig) => {
+    setSelectedModalProvider(config);
+  };
+
+  const handleSaveProviderConnection = (data: {
+    apiKey: string;
+    email?: string;
+    model: string;
+    syncExistingChats: boolean;
+  }) => {
+    if (!selectedModalProvider) return;
+
+    const id = selectedModalProvider.id;
+    setProviders((prev) => {
+      const exists = prev.find((p) => p.id === id);
+      const updatedItem: ProviderConnection = {
+        id,
+        name: selectedModalProvider.name,
+        connected: true,
+        apiKey: data.apiKey,
+        email: data.email,
+        currentModel: data.model,
+        latency: "35ms",
+        lastSynced: new Date().toISOString(),
+        features: selectedModalProvider.features,
+        syncExistingChats: data.syncExistingChats,
+      };
+
+      if (exists) {
+        return prev.map((p) => (p.id === id ? updatedItem : p));
+      }
+      return [...prev, updatedItem];
+    });
+
+    if (!selectedProvider) {
+      setSelectedProvider(id);
+    }
+
+    setSelectedModalProvider(null);
+  };
+
+  const handleDisconnectProvider = (id: string) => {
+    setProviders((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, connected: false } : p))
+    );
+    if (selectedProvider === id) {
+      setSelectedProvider("system");
+    }
+  };
 
   const handleSavePreferences = async () => {
     setLoading(true);
@@ -81,7 +136,8 @@ export default function SettingsView({ user, onRefreshUser, onLogout }: Settings
         taxonomyFocus,
         contextAwareness,
         selectedProvider,
-        selectedVoiceId
+        selectedVoiceId,
+        language: appLanguage
       });
       await updateProviders(providers);
       await updateUserProfile({
@@ -95,7 +151,7 @@ export default function SettingsView({ user, onRefreshUser, onLogout }: Settings
         learningObjectives
       });
       onRefreshUser(); // Refresh root context
-      setSuccessMsg("System parameters & academic profile updated successfully.");
+      setSuccessMsg(appLanguage === "fr" ? "Paramètres et profil mis à jour avec succès." : "App preferences & academic profile updated successfully.");
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch {
       setSuccessMsg("Error updating preferences. Local state retained.");
@@ -111,7 +167,7 @@ export default function SettingsView({ user, onRefreshUser, onLogout }: Settings
       if (exists) {
         return prev.map(p => p.id === id ? { ...p, connected: !p.connected } : p);
       }
-      return [...prev, { id, name: PROVIDERS_LIST.find(x => x.id === id)?.name || id, connected: true, currentModel: "default-model", latency: "100ms", features: ["Standard"] }];
+      return [...prev, { id, name: PROVIDERS_CONFIG.find(x => x.id === id)?.name || id, connected: true, currentModel: "default-model", latency: "100ms", features: ["Standard"] }];
     });
   };
 
@@ -122,10 +178,12 @@ export default function SettingsView({ user, onRefreshUser, onLogout }: Settings
       <div>
         <h2 className="font-serif italic text-2xl text-white font-medium flex items-center gap-2">
           <Settings2 className="w-6 h-6 text-brand-primary stroke-[1.5]" />
-          System Parameters & Preferences
+          {appLanguage === "fr" ? "Paramètres & Préférences" : "App Settings & Preferences"}
         </h2>
         <p className="text-xs text-slate-400 mt-1">
-          Configure the proprietary Socratic Educational Intelligence Layer models, typography scales, and visual interfaces.
+          {appLanguage === "fr" 
+            ? "Configurez l'assistance d'apprentissage IA, la langue de l'application, les thèmes visuels et votre profil d'étude." 
+            : "Configure AI learning guidance, app language, visual themes, and your study profile."}
         </p>
       </div>
 
@@ -139,18 +197,50 @@ export default function SettingsView({ user, onRefreshUser, onLogout }: Settings
         
         {/* Left column: Visual System & Themes */}
         <div className="lg:col-span-2 space-y-6">
+
+          {/* Language Selector Card */}
+          <div className="p-5 rounded-xl border border-slate-800 bg-slate-900/40 space-y-4">
+            <h3 className="text-xs font-semibold uppercase tracking-wider font-mono text-slate-300 flex items-center gap-1.5">
+              <Globe className="w-4 h-4 text-indigo-400" />
+              {appLanguage === "fr" ? "Langue de l'application" : "App Language"}
+            </h3>
+
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { id: "en", name: "English", desc: "Standard English interface" },
+                { id: "fr", name: "Français", desc: "Interface en français" },
+              ].map((langItem) => (
+                <button
+                  id={`lang_opt_${langItem.id}`}
+                  key={langItem.id}
+                  onClick={() => setAppLanguage(langItem.id as any)}
+                  className={`p-4 rounded-xl border text-left transition-all ${
+                    appLanguage === langItem.id
+                      ? "bg-indigo-500/15 border-indigo-500 text-white shadow-md shadow-indigo-500/20 ring-1 ring-indigo-500/30"
+                      : "bg-slate-950/40 border-slate-800 hover:border-slate-700 text-slate-400"
+                  }`}
+                >
+                  <div className="text-xs font-semibold flex items-center justify-between">
+                    <span>{langItem.name}</span>
+                    {appLanguage === langItem.id && <Check className="w-3.5 h-3.5 text-indigo-400" />}
+                  </div>
+                  <div className="text-[10px] text-slate-500 font-mono mt-0.5">{langItem.desc}</div>
+                </button>
+              ))}
+            </div>
+          </div>
           
           {/* Theme card */}
           <div className="p-5 rounded-xl border border-slate-800 bg-slate-900/40 space-y-4">
             <h3 className="text-xs font-semibold uppercase tracking-wider font-mono text-slate-300 flex items-center gap-1.5">
               <Eye className="w-4 h-4 text-slate-500" />
-              Visual Interface Theme
+              {appLanguage === "fr" ? "Thème visuel" : "Visual Theme"}
             </h3>
 
             <div className="grid grid-cols-2 gap-3">
               {[
-                { id: "obsidian", name: "Obsidian Deep", desc: "#0c0e12 carbon" },
-                { id: "cybernetic", name: "Cybernetic Neon", desc: "Phosphorous terminal" },
+                { id: "obsidian", name: "Obsidian Dark", desc: "#0c0e12 dark theme" },
+                { id: "cybernetic", name: "Cybernetic Terminal", desc: "High contrast dark" },
               ].map((item) => (
                 <button
                   id={`theme_opt_${item.id}`}
@@ -173,39 +263,43 @@ export default function SettingsView({ user, onRefreshUser, onLogout }: Settings
           <div className="p-5 rounded-xl border border-slate-800 bg-slate-900/40 space-y-4">
             <h3 className="text-xs font-semibold uppercase tracking-wider font-mono text-slate-300 flex items-center gap-1.5">
               <Sliders className="w-4 h-4 text-slate-500" />
-              Socratic Cognitive Adjustments
+              {appLanguage === "fr" ? "Paramètres du Tuteur IA" : "AI Learning & Tutoring Settings"}
             </h3>
 
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Teaching Style */}
                 <div>
-                  <label className="block text-[10px] font-mono text-slate-500 uppercase mb-1.5">Discourse Dialectic Style</label>
+                  <label className="block text-[10px] font-mono text-slate-500 uppercase mb-1.5">
+                    {appLanguage === "fr" ? "Style d'enseignement" : "Teaching & Dialogue Style"}
+                  </label>
                   <select
                     id="sel_pref_style"
                     value={teachingStyle}
                     onChange={(e) => setTeachingStyle(e.target.value as any)}
                     className="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-xs text-slate-300 focus:outline-none"
                   >
-                    <option value="Socratic">Socratic Discourse (Asks Guiding Questions)</option>
-                    <option value="Explanatory">Explanatory Narrative (Direct Answers)</option>
-                    <option value="Practical">Practical Sandbox (Code / Formula derivation)</option>
-                    <option value="Theoretical">Theoretical Axioms (Math Theorems & Proofs)</option>
+                    <option value="Socratic">{appLanguage === "fr" ? "Tuteur Guidé (Pose des questions d'orientation)" : "Guided AI Tutor (Asks Guiding Questions)"}</option>
+                    <option value="Explanatory">{appLanguage === "fr" ? "Narratif Explicatif (Réponses directes)" : "Explanatory Narrative (Direct Explanations)"}</option>
+                    <option value="Practical">{appLanguage === "fr" ? "Pratique / Code (Exercices & Formules)" : "Practical Sandbox (Code & Problem Solving)"}</option>
+                    <option value="Theoretical">{appLanguage === "fr" ? "Théorique (Théorèmes & Preuves)" : "Theoretical Axioms (Theorems & Proofs)"}</option>
                   </select>
                 </div>
 
                 {/* Cognitive Load */}
                 <div>
-                  <label className="block text-[10px] font-mono text-slate-500 uppercase mb-1.5">Baseline Working Memory Bandwidth</label>
+                  <label className="block text-[10px] font-mono text-slate-500 uppercase mb-1.5">
+                    {appLanguage === "fr" ? "Niveau de complexité d'étude" : "Study Complexity Level"}
+                  </label>
                   <select
                     id="sel_pref_load"
                     value={cognitiveLoad}
                     onChange={(e) => setCognitiveLoad(e.target.value as any)}
                     className="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-xs text-slate-300 focus:outline-none"
                   >
-                    <option value="Novice">Novice (Low complexity, gentle pacing)</option>
-                    <option value="Proficient">Proficient (Graduate-level rigorous definitions)</option>
-                    <option value="Master">Master (Complex proofs, high formula density)</option>
+                    <option value="Novice">{appLanguage === "fr" ? "Débutant (Rythme doux & explications claires)" : "Novice (Gentle pacing & clear concepts)"}</option>
+                    <option value="Proficient">{appLanguage === "fr" ? "Intermédiaire (Niveau universitaire standard)" : "Proficient (University level standard)"}</option>
+                    <option value="Master">{appLanguage === "fr" ? "Avancé (Preuves complexes & équations)" : "Master (Advanced proofs & equations)"}</option>
                   </select>
                 </div>
               </div>
@@ -314,15 +408,23 @@ export default function SettingsView({ user, onRefreshUser, onLogout }: Settings
 
           {/* AI Providers Management */}
           <div className="p-5 rounded-xl border border-slate-800 bg-slate-900/40 space-y-4 mt-6">
-            <h3 className="text-xs font-semibold uppercase tracking-wider font-mono text-slate-300 flex items-center gap-1.5 pb-2 border-b border-slate-800">
-              <Cpu className="w-4 h-4 text-slate-500" />
-              AI Providers Management
-            </h3>
+            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+              <h3 className="text-xs font-semibold uppercase tracking-wider font-mono text-slate-300 flex items-center gap-1.5">
+                <Cpu className="w-4 h-4 text-purple-400" />
+                AI Providers & Key Management
+              </h3>
+              <span className="text-[10px] font-mono text-slate-500">
+                Active Provider: <span className="text-purple-300 font-semibold">{selectedProvider}</span>
+              </span>
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {PROVIDERS_LIST.map((provider) => {
+              {PROVIDERS_CONFIG.map((provider) => {
                 const connectedInfo = providers.find((p) => p.id === provider.id);
-                const isConnected = !!connectedInfo?.connected;
+                // System default is connected if explicitly chosen or default
+                const isConnected = provider.isSystemDefault
+                  ? connectedInfo?.connected !== false
+                  : !!connectedInfo?.connected;
                 const isDefault = selectedProvider === provider.id;
 
                 return (
@@ -339,33 +441,79 @@ export default function SettingsView({ user, onRefreshUser, onLogout }: Settings
                         <div className={`p-1.5 rounded bg-slate-900 ${provider.color}`}>
                           <Cpu className="w-4 h-4" />
                         </div>
-                        <span className="text-xs font-semibold text-slate-200">{provider.name}</span>
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs font-semibold text-slate-200">{provider.name}</span>
+                            {provider.isSystemDefault && (
+                              <span className="text-[8px] font-mono px-1.5 py-0.2 bg-purple-500/20 text-purple-300 rounded">
+                                Built-In
+                              </span>
+                            )}
+                          </div>
+                        </div>
                       </div>
                       
-                      <button
-                        onClick={() => handleToggleProvider(provider.id)}
-                        className={`text-[9px] font-mono px-2 py-0.5 rounded ${
-                          isConnected 
-                            ? "bg-emerald-500/10 text-emerald-400 hover:bg-red-500/10 hover:text-red-400" 
-                            : "bg-brand-primary/10 text-brand-light hover:bg-brand-primary/20"
-                        }`}
-                      >
-                        {isConnected ? "Disconnect" : "Connect"}
-                      </button>
+                      {provider.isSystemDefault ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setProviders((prev) => {
+                              const exists = prev.find((p) => p.id === "system");
+                              if (exists) return prev.map((p) => (p.id === "system" ? { ...p, connected: true } : p));
+                              return [...prev, { id: "system", name: provider.name, connected: true, currentModel: "system-gemini-flash", latency: "25ms", features: provider.features }];
+                            });
+                            setSelectedProvider("system");
+                          }}
+                          className={`text-[9px] font-mono px-2 py-0.5 rounded ${
+                            isDefault 
+                              ? "bg-purple-500/20 text-purple-300 border border-purple-500/30" 
+                              : "bg-purple-600/10 text-purple-400 hover:bg-purple-600/20 cursor-pointer"
+                          }`}
+                        >
+                          {isDefault ? "Active Default" : "Set Active"}
+                        </button>
+                      ) : isConnected ? (
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenProviderModal(provider)}
+                            className="text-[9px] font-mono px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 cursor-pointer"
+                          >
+                            Edit Key
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDisconnectProvider(provider.id)}
+                            className="text-[9px] font-mono px-2 py-0.5 rounded bg-red-500/10 text-red-400 hover:bg-red-500/20 cursor-pointer"
+                          >
+                            Disconnect
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleOpenProviderModal(provider)}
+                          className="text-[9px] font-mono px-2.5 py-0.5 rounded bg-blue-600/20 text-blue-300 hover:bg-blue-600/30 border border-blue-500/30 flex items-center gap-1 cursor-pointer"
+                        >
+                          <KeyRound className="w-3 h-3" /> Connect Key
+                        </button>
+                      )}
                     </div>
                     
-                    <p className="text-[10px] text-slate-500 leading-relaxed min-h-[30px]">
+                    <p className="text-[10px] text-slate-500 leading-relaxed min-h-[28px]">
                       {provider.desc}
                     </p>
 
-                    {isConnected && (
-                      <div className="mt-3 pt-3 border-t border-slate-800/50 flex items-center justify-between">
-                        <span className="text-[9px] text-slate-400 font-mono">
-                          {connectedInfo.latency || "Ready"}
-                        </span>
+                    <div className="mt-3 pt-2.5 border-t border-slate-800/50 flex items-center justify-between">
+                      <span className="text-[9px] text-slate-400 font-mono">
+                        {connectedInfo?.currentModel || provider.models[0]?.id || "Ready"}
+                      </span>
+
+                      {isConnected && !provider.isSystemDefault && (
                         <button
+                          type="button"
                           onClick={() => setSelectedProvider(provider.id)}
-                          className={`flex items-center gap-1 text-[9px] font-mono px-2 py-0.5 rounded ${
+                          className={`flex items-center gap-1 text-[9px] font-mono px-2 py-0.5 rounded cursor-pointer ${
                             isDefault 
                               ? "bg-purple-500/20 text-purple-300 ring-1 ring-purple-500/50" 
                               : "bg-slate-800 text-slate-400 hover:bg-slate-700"
@@ -374,8 +522,8 @@ export default function SettingsView({ user, onRefreshUser, onLogout }: Settings
                           {isDefault && <Check className="w-2.5 h-2.5" />}
                           {isDefault ? "Default" : "Set Default"}
                         </button>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
                 );
               })}
@@ -390,17 +538,24 @@ export default function SettingsView({ user, onRefreshUser, onLogout }: Settings
             className="w-full py-3.5 bg-brand-primary hover:bg-brand-medium text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors shadow-lg shadow-brand-dark/20 cursor-pointer"
           >
             <Save className="w-4 h-4" />
-            {loading ? "Re-calibrating models..." : "Apply Cognitive Settings"}
+            {loading 
+              ? (appLanguage === "fr" ? "Enregistrement..." : "Saving settings...") 
+              : (appLanguage === "fr" ? "Appliquer les paramètres" : "Apply Settings")}
           </button>
         </div>
 
         {/* Right column: Academic & Prompt Profile */}
         <div className="space-y-6">
-          <div className="p-5 rounded-xl border border-slate-800 bg-slate-900/40 space-y-4">
-            <h3 className="text-xs font-semibold uppercase tracking-wider font-mono text-slate-300 flex items-center gap-1.5 pb-2 border-b border-slate-800">
-              <User className="w-4 h-4 text-slate-500" />
-              Academic & Prompt Profile
-            </h3>
+          <div id="academic-prompt-profile" className="p-5 rounded-xl border border-brand-primary/40 bg-slate-900/50 space-y-4 ring-1 ring-brand-primary/30 shadow-lg shadow-brand-dark/10 transition-all">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+              <h3 className="text-xs font-semibold uppercase tracking-wider font-mono text-slate-200 flex items-center gap-1.5">
+                <User className="w-4 h-4 text-brand-light" />
+                Academic & Prompt Profile
+              </h3>
+              <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-brand-primary/20 text-brand-light border border-brand-primary/30">
+                Primary Profile
+              </span>
+            </div>
 
             <div className="space-y-4">
               <div className="space-y-1.5">
@@ -535,6 +690,15 @@ export default function SettingsView({ user, onRefreshUser, onLogout }: Settings
 
 
       </div>
+
+      {/* AI Key Connect Modal */}
+      <AIKeyConnectModal
+        provider={selectedModalProvider}
+        existingConnection={selectedModalProvider ? providers.find((p) => p.id === selectedModalProvider.id) : undefined}
+        isOpen={!!selectedModalProvider}
+        onClose={() => setSelectedModalProvider(null)}
+        onSave={handleSaveProviderConnection}
+      />
     </div>
   );
 }

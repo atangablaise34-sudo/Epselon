@@ -7,6 +7,7 @@ import dotenv from "dotenv";
 import { orchestrateProtocolTurn } from "./src/lib/protocol/orchestrator";
 import { LearningIntentEngine } from "./src/lib/protocol/learningIntentEngine";
 import { PipelineRouter } from "./src/lib/protocol/pipelineRouter";
+import { EducationalContextEngine } from "./src/lib/protocol/educationalContextEngine";
 import {
   triggerLessonCompletion,
   triggerReflectionCompletion,
@@ -50,8 +51,9 @@ if (process.env.GEMINI_API_KEY) {
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 let supabase: SupabaseClient | null = null;
 if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  const cleanSupabaseUrl = process.env.SUPABASE_URL.replace(/\/rest\/v1\/?$/, "").replace(/\/$/, "");
   supabase = createClient(
-    process.env.SUPABASE_URL,
+    cleanSupabaseUrl,
     process.env.SUPABASE_SERVICE_ROLE_KEY,
     {
       auth: {
@@ -60,7 +62,7 @@ if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
       }
     }
   );
-  console.log("Supabase client initialized with Service Role Key.");
+  console.log(`Supabase client initialized for ${cleanSupabaseUrl} with Service Role Key.`);
 }
 
 
@@ -649,13 +651,14 @@ app.post("/api/auth/register", async (req, res) => {
     }
 
     let userId = "usr_" + Math.random().toString(36).substr(2, 9);
+    let requiresVerification = false;
       
     if (supabase) {
-      // 1. Create user in Supabase Auth
+      // 1. Create user in Supabase Auth with email_confirm: false so verification is strictly required!
       const { data: authData, error: authError } = await supabase.auth.admin.createUser({
         email,
         password,
-        email_confirm: true,
+        email_confirm: false,
         user_metadata: { full_name: fullName }
       });
 
@@ -664,39 +667,49 @@ app.post("/api/auth/register", async (req, res) => {
       }
 
       userId = authData.user.id;
+      requiresVerification = true;
+
+      // Trigger verification email resend/send via Supabase
+      try {
+        await supabase.auth.resend({
+          type: "signup",
+          email
+        });
+      } catch (e) {
+        console.warn("Resend email notification trigger notice:", e);
+      }
 
       // 2. Insert into public.users
-      const { error: profileError } = await supabase.from("users").insert([{
-        id: userId,
-        email,
-        full_name: fullName,
-        country: country || "United States",
-        university: university || "Stanford University",
-        faculty: faculty || "Sciences",
-        department: department || "Physics",
-        academic_level: academicLevel || "PhD Candidate",
-        preferred_language: preferredLanguage || "English",
-        learning_style: "Visual",
-        weekly_commitment: "5-10",
-        learning_objectives: "",
-        mastery_progress: 0,
-        learning_streak: 1,
-        cards_mastered: 0,
-        total_cards: 0,
-        preferences: {
-          theme: "obsidian",
-          accentColor: "blue",
-          fontSize: "100%",
-          teachingStyle: "Socratic",
-          cognitiveLoad: "Proficient",
-          taxonomyFocus: "Analyze & Evaluate",
-          contextAwareness: true,
-        }
-      }]);
-
-      if (profileError) {
-        console.error("Profile insertion error:", profileError);
-        return res.status(500).json({ error: "User created in auth, but profile creation failed." });
+      try {
+        await supabase.from("users").insert([{
+          id: userId,
+          email,
+          full_name: fullName,
+          country: country || "United States",
+          university: university || "Stanford University",
+          faculty: faculty || "Sciences",
+          department: department || "Physics",
+          academic_level: academicLevel || "PhD Candidate",
+          preferred_language: preferredLanguage || "English",
+          learning_style: "Visual",
+          weekly_commitment: "5-10",
+          learning_objectives: "",
+          mastery_progress: 0,
+          learning_streak: 1,
+          cards_mastered: 0,
+          total_cards: 0,
+          preferences: {
+            theme: "obsidian",
+            accentColor: "blue",
+            fontSize: "100%",
+            teachingStyle: "Socratic",
+            cognitiveLoad: "Proficient",
+            taxonomyFocus: "Analyze & Evaluate",
+            contextAwareness: true,
+          }
+        }]);
+      } catch (profileErr) {
+        console.warn("Public.users table insert warning (will fallback to local profile if table absent):", profileErr);
       }
     }
 
@@ -729,9 +742,8 @@ app.post("/api/auth/register", async (req, res) => {
       },
     };
 
-    if (!supabase) {
-      db.users[email] = newUser;
-    }
+    db.users[email] = newUser;
+
     // Seed basic initial data for the new user
     db.sessions[userId] = [
       {
@@ -779,11 +791,22 @@ app.post("/api/auth/register", async (req, res) => {
     ];
 
     saveDb();
-    activeSessionUserId = userId;
-    res.json({ user: newUser });
+
+    if (!requiresVerification) {
+      activeSessionUserId = userId;
+    }
+
+    res.json({
+      user: newUser,
+      requiresVerification,
+      email,
+      message: requiresVerification
+        ? `Account created! We sent a verification email to ${email}. Please confirm your email before signing in.`
+        : "Registration successful!"
+    });
   } catch (err: any) {
     console.error("Unhandled error in /api/auth/register:", err);
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json({ error: err.message || "Internal Server Error" });
   }
 });
 
@@ -804,7 +827,25 @@ app.post("/api/auth/login", async (req, res) => {
       });
 
       if (authError || !authData.user) {
-        return res.status(401).json({ error: authError?.message || "Invalid credentials" });
+        const errMsg = authError?.message || "";
+        const isUnconfirmed = errMsg.toLowerCase().includes("confirm") || errMsg.toLowerCase().includes("verify");
+        if (isUnconfirmed) {
+          return res.status(401).json({
+            error: "Email address not verified. Please check your inbox and click the verification link before signing in.",
+            requiresVerification: true,
+            email
+          });
+        }
+        return res.status(401).json({ error: errMsg || "Invalid credentials" });
+      }
+
+      // Explicit check for email verification status
+      if (!authData.user.email_confirmed_at && !authData.user.confirmed_at) {
+        return res.status(401).json({
+          error: "Email address not verified. Please check your inbox and click the verification link before signing in.",
+          requiresVerification: true,
+          email
+        });
       }
 
       const { data: profile, error: profileError } = await supabase
@@ -814,10 +855,37 @@ app.post("/api/auth/login", async (req, res) => {
         .single();
 
       if (profileError || !profile) {
-        console.warn("Profile not found in Supabase database, falling back to local for preview", profileError);
+        console.warn("Profile not found in Supabase database, falling back to local database profile", profileError);
         user = Object.values(db.users).find((u) => u.email === email);
         if (!user) {
-          return res.status(401).json({ error: "Profile not found in database" });
+          user = {
+            id: authData.user.id,
+            email: authData.user.email || email,
+            fullName: authData.user.user_metadata?.full_name || "Academic User",
+            country: "United States",
+            university: "Stanford University",
+            faculty: "Sciences",
+            department: "Physics",
+            academicLevel: "PhD Candidate",
+            preferredLanguage: "English",
+            learningStyle: "Visual",
+            weeklyCommitment: "5-10",
+            learningObjectives: "",
+            masteryProgress: 0,
+            learningStreak: 1,
+            cardsMastered: 0,
+            totalCards: 0,
+            preferences: {
+              theme: "obsidian",
+              accentColor: "blue",
+              fontSize: "100%",
+              teachingStyle: "Socratic",
+              cognitiveLoad: "Proficient",
+              taxonomyFocus: "Analyze & Evaluate",
+              contextAwareness: true,
+            },
+            providers: [],
+          };
         }
       } else {
         // Map snake_case database columns to camelCase UserProfile
@@ -845,8 +913,7 @@ app.post("/api/auth/login", async (req, res) => {
       activeSessionUserId = user.id;
     } else {
       // Fallback to local DB
-      user = Object.values(db.users).find((u) => u.email === email); // Note: it's not db.users[email] because the key might be email or not. Actually, db.users[email] was used before. Wait, previously it was `db.users[email]`. Let's search by email to be safe.
-      user = user || Object.values(db.users).find((u) => u.email === email);
+      user = Object.values(db.users).find((u) => u.email === email);
       
       if (!user) {
         return res.status(401).json({ error: "Invalid credentials" });
@@ -858,6 +925,29 @@ app.post("/api/auth/login", async (req, res) => {
   } catch (err: any) {
     console.error("Unhandled error in /api/auth/login:", err);
     res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+app.post("/api/auth/resend-verification", async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ error: "Email is required" });
+    }
+
+    if (supabase) {
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email
+      });
+      if (error) {
+        return res.status(400).json({ error: error.message });
+      }
+    }
+
+    res.json({ success: true, message: `Verification link has been resent to ${email}. Please check your inbox.` });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to resend verification link." });
   }
 });
 
@@ -1295,136 +1385,58 @@ export function robustParseJson(raw: string): any {
   }
 }
 
-// ENDPOINT TO ENHANCE PROMPT WITH CHOSEN AI MODEL GRACEFULLY INJECTING USER PROFILE
+// ENDPOINT FOR EDUCATIONAL CONTEXT ENGINE (ECE) CONTEXT ASSEMBLY
 app.post("/api/study/enhance-prompt", async (req, res) => {
   try {
     if (!activeSessionUserId) {
       return res.status(401).json({ error: "No active session user" });
     }
-  const { originalPrompt, topic, sessionId } = req.body;
-  if (!originalPrompt) {
-    return res.status(400).json({ error: "Missing originalPrompt" });
-  }
-
-  // --- ARCHITECTURAL REFACTOR: LEARNING INTENT ENGINE & PIPELINE ROUTING ---
-  // The Learning Intent Engine is the FIRST engine to execute.
-  const userSessions = db.sessions[activeSessionUserId] || [];
-  const session = sessionId ? userSessions.find((s) => s.id === sessionId) : null;
-
-  let learningIntent;
-  let routedPipeline;
-
-  if (session && session.manualIntent && session.manualIntent !== "Unknown") {
-    learningIntent = {
-      intent: session.manualIntent,
-      confidence: 1.0,
-      explanation: "Bypassed classifier. Student's manual choice always wins."
-    };
-    routedPipeline = PipelineRouter.route(learningIntent);
-    console.log(`[SESSION MEMORY ENGINE] Bypassed classifier. Using manual override: "${session.manualIntent}" in enhance-prompt`);
-  } else if (session && session.currentIntent && session.currentIntent !== "Unknown") {
-    learningIntent = {
-      intent: session.currentIntent,
-      confidence: 1.0,
-      explanation: "Reusing active session context memory intent."
-    };
-    routedPipeline = PipelineRouter.route(learningIntent);
-    console.log(`[SESSION MEMORY ENGINE] Reusing existing session intent: "${session.currentIntent}" in enhance-prompt`);
-  } else {
-    const intentEngine = new LearningIntentEngine(ai);
-    learningIntent = await intentEngine.classify(originalPrompt);
-    routedPipeline = PipelineRouter.route(learningIntent);
-    if (session) {
-      session.currentIntent = learningIntent.intent;
-      saveDb();
+    const { originalPrompt, topic, sessionId } = req.body;
+    if (!originalPrompt) {
+      return res.status(400).json({ error: "Missing originalPrompt" });
     }
-    console.log(`[LEARNING INTENT ENGINE] Prompt classified and stored in session memory: "${originalPrompt}" -> Intent: ${learningIntent.intent} (Confidence: ${learningIntent.confidence})`);
-  }
 
-  console.log(`[PIPELINE ROUTER] Selected Pipeline in enhance-prompt: ${routedPipeline.pipelineId}. Reason: ${routedPipeline.reason}`);
+    const user = Object.values(db.users).find((u) => u.id === activeSessionUserId);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
 
-  // Short-circuit purely conversational prompts
-  if (routedPipeline.pipelineId === "casual") {
-    return res.json({ 
-      enhancedPrompt: originalPrompt.trim(), 
-      isConversational: true,
-      learningIntent,
-      pipelineRouting: routedPipeline
+    const userSessions = db.sessions[activeSessionUserId] || [];
+    const session = sessionId ? userSessions.find((s) => s.id === sessionId) : null;
+
+    // Execute Educational Context Engine (ECE) Middleware
+    ensureKnowledgeGraph(user);
+    const provider = user.preferences?.selectedProvider || "Gemini 3.5 Flash";
+    const mode = session?.manualIntent ? `${session.manualIntent} Mode` : "Study Mode";
+
+    const ecePacket = EducationalContextEngine.process({
+      originalPrompt: originalPrompt.trim(),
+      user,
+      sessionFocus: topic || session?.focus || "General Discipline",
+      provider,
+      mode,
+      knowledgeGraph: user.knowledgeGraph,
     });
-  }
 
-  const user = Object.values(db.users).find((u) => u.id === activeSessionUserId);
-  if (!user) {
-    return res.status(404).json({ error: "User not found" });
-  }
+    const isConversational = ecePacket.analysis.isCasual;
 
-  const provider = user.preferences?.selectedProvider || "gemini";
-  let model = user.preferences?.selectedModel;
-  if (!model) {
-    if (provider === "gemini") {
-      model = "gemini-3.5-flash";
-    } else {
-      model = "gemini-3.5-flash";
-    }
-  }
-
-  const focusTopic = topic || "General Science";
-  const fullName = user.fullName || "Student";
-  const acadLevel = user.academicLevel || "Undergraduate Student";
-  const uni = user.university || "University";
-  const dept = user.department || "Science";
-  const style = user.learningStyle || "Visual";
-  const load = user.preferences?.cognitiveLoad || "Proficient";
-
-  const systemInstructions = `You are an expert academic prompt engineer. Your job is to rewrite the student's original learning query into a highly effective, natural, and human-sounding prompt for an AI tutor.
-The student's profile information is:
-- Name: ${fullName}
-- Academic Level: ${acadLevel}
-- University: ${uni}
-- Faculty/Department: ${user.faculty || ""} / ${dept}
-- Learning Style: ${style}
-- Cognitive Load Level: ${load}
-- Topic: ${focusTopic}
-
-Rules:
-1. Make the prompt sound highly human, natural, conversational, and personalized. DO NOT make it sound like a template or a robot.
-2. Gracefully embed their profile information (such as their academic background, university, department, learning style, and cognitive load) into the conversational flow of the query, so it sounds like a real student explaining their background and what they are looking for.
-3. Keep the user's original intent intact, but expand it to ask for deep first-principles explanations, intuitive real-world examples (especially local or visual ones fitting their learning style), and Socratic guiding questions before revealing final derivations.
-4. If the student's prompt is purely conversational, a greeting (e.g. "Hi", "Hello", "How are you?", "Thanks"), or non-educational small talk, DO NOT enhance it. Instead, return the exact original prompt.
-5. You MUST return your response strictly as a JSON object containing two fields: "isConversational" (boolean) and "enhancedPrompt" (string). Do not return markdown, just the JSON string.
-`;
-
-  if (ai) {
-    try {
-      const response = await generateContentWithFallback(ai, {
-        model: model,
-        contents: [
-          { role: "user", parts: [{ text: `${systemInstructions}\n\nStudent asks: "${originalPrompt}"` }] }
-        ],
-        config: {
-          temperature: 0.7,
-          responseMimeType: "application/json"
-        }
-      });
-      const text = response.text?.trim() || "{}";
-      const parsed = JSON.parse(text);
-      return res.json({ 
-        enhancedPrompt: parsed.enhancedPrompt || originalPrompt,
-        isConversational: !!parsed.isConversational
-      });
-    } catch (apiErr) {
-      console.error("Failed to enhance prompt with Gemini, falling back:", apiErr);
-    }
-  }
-
-  const isConvo = false;
-  const fallbackEnhanced = isConvo ? originalPrompt : `Hi! I'm a ${acadLevel} studying ${dept} at ${uni}. With my ${style} learning style and studying at a ${load} level, could you explain "${originalPrompt.trim()}" in an intuitive, deep way? Please lead with relatable, everyday physical systems or analogies, and ask me a Socratic checkpoint question before writing out final formal proofs. Thanks!`;
-  return res.json({ 
-    enhancedPrompt: fallbackEnhanced, 
-    isConversational: isConvo,
-    learningIntent,
-    pipelineRouting: routedPipeline
-  });
+    return res.json({
+      originalPrompt: ecePacket.originalPrompt,
+      enhancedPrompt: ecePacket.originalPrompt, // Preserve student's words 100%
+      contextPacket: ecePacket.composedSystemPrompt,
+      summary: ecePacket.summary,
+      ecePacket: ecePacket,
+      isConversational,
+      learningIntent: {
+        intent: ecePacket.analysis.category,
+        confidence: ecePacket.analysis.confidence,
+        reasoning: `Categorized as ${ecePacket.analysis.category} in discipline ${ecePacket.analysis.subject}`
+      },
+      pipelineRouting: {
+        pipelineId: isConversational ? "casual" : "study",
+        reason: `Processed by Educational Context Engine for ${ecePacket.analysis.subject}`
+      }
+    });
   } catch (err: any) {
     console.error("Unhandled error in /api/study/enhance-prompt:", err);
     res.status(500).json({ error: "Internal Server Error" });
@@ -1982,10 +1994,16 @@ app.post("/api/study/reflection", (req, res) => {
   if (!db.flashcards[activeSessionUserId]) {
     db.flashcards[activeSessionUserId] = [];
   }
-  db.flashcards[activeSessionUserId].push(...newCards);
-  coll.totalCards += 4;
-  coll.dueTodayCount += 4;
-  user.totalCards += 4;
+
+  const existingFronts = new Set(db.flashcards[activeSessionUserId].map(c => c.front.trim().toLowerCase()));
+  const uniqueNewCards = newCards.filter(c => !existingFronts.has(c.front.trim().toLowerCase()));
+
+  if (uniqueNewCards.length > 0) {
+    db.flashcards[activeSessionUserId].push(...uniqueNewCards);
+    coll.totalCards += uniqueNewCards.length;
+    coll.dueTodayCount += uniqueNewCards.length;
+    user.totalCards += uniqueNewCards.length;
+  }
 
   // 2.5 Knowledge Graph Engine Auto-Update (Stage 9)
   ensureKnowledgeGraph(user);
@@ -2070,225 +2088,57 @@ app.post("/api/flashcards/review", (req, res) => {
   res.json({ success: true, card });
 });
 
-// TEACHER DASHBOARD API ENDPOINTS
-app.get("/api/teacher/analytics", (req, res) => {
+// TEACHER LENS PERSONA Q&A ENDPOINT
+app.post("/api/study/teacher-lens-chat", async (req, res) => {
   try {
-    const allUsers = Object.values(db.users);
-    const totalStudents = allUsers.length;
-    
-    // Calculate average mastery progress
-    const avgMastery = totalStudents > 0 
-      ? Math.round(allUsers.reduce((sum, u) => sum + (u.masteryProgress || 0), 0) / totalStudents)
-      : 0;
-
-    // Calculate total flashcards generated & mastered
-    const totalFlashcards = allUsers.reduce((sum, u) => sum + (u.totalCards || 0), 0);
-    const totalMasteredCards = allUsers.reduce((sum, u) => sum + (u.cardsMastered || 0), 0);
-
-    // Get active sessions
-    let totalSessions = 0;
-    Object.values(db.sessions).forEach(sessList => {
-      totalSessions += sessList.length;
-    });
-
-    // Student list with high-fidelity telemetry profiles
-    const students = allUsers.map(u => {
-      const userSessions = db.sessions[u.id] || [];
-      const latestSessionTopic = userSessions.length > 0 ? userSessions[userSessions.length - 1].focus : "General Science";
-      const sessionCount = userSessions.length;
-      
-      return {
-        id: u.id,
-        fullName: u.fullName,
-        email: u.email,
-        university: u.university,
-        department: u.department,
-        academicLevel: u.academicLevel,
-        masteryProgress: u.masteryProgress || 0,
-        streak: u.learningStreak || 1,
-        cardsMastered: u.cardsMastered || 0,
-        totalCards: u.totalCards || 0,
-        learningStyle: u.learningStyle || "Visual",
-        cognitiveStyle: u.preferences?.teachingStyle || "Socratic",
-        latestSessionTopic,
-        sessionCount
-      };
-    });
-
-    res.json({
-      analytics: {
-        totalStudents,
-        avgMastery,
-        totalFlashcards,
-        totalMasteredCards,
-        totalSessions,
-        students
-      }
-    });
-  } catch (err: any) {
-    res.status(500).json({ error: "Failed to load academic analytics: " + err.message });
-  }
-});
-
-app.post("/api/teacher/generate", async (req, res) => {
-  try {
-    const { type, topic, level, instructions } = req.body;
-    if (!type || !topic || !level) {
-      return res.status(400).json({ error: "Missing type, topic, or level field" });
+    const { question, topicName, academicLevel, discipline, lessonText } = req.body;
+    if (!question) {
+      return res.status(400).json({ error: "Missing question" });
     }
 
-  const customPrompt = instructions ? `Additional custom instructions: ${instructions}` : "";
+    const topic = topicName || "Academic Concept";
+    const field = discipline || "Academic Science";
+    const level = academicLevel || "Undergraduate";
 
-  let prompt = "";
-  let systemInstruction = "";
+    if (ai && !isGeminiQuotaExceeded) {
+      try {
+        const response = await generateContentWithFallback(ai, {
+          model: "gemini-3.5-flash",
+          contents: [
+            {
+              role: "user",
+              parts: [{
+                text: `System Instruction: You are an experienced Senior University Lecturer and Lead Examiner in ${field}. You are conducting a post-lesson Teacher Lens discussion with a ${level} student who just finished a study session on "${topic}".
+Your tone should be warm, wise, encouraging, and focused on examiner perspective. Explain misconceptions, why marks are lost or gained, and how to think about this concept deeply. Never just give lazy direct answers.
 
-  if (type === "notes") {
-    systemInstruction = `You are an elite University Professor and Pedagogical Architect. Your goal is to produce rigorous, high-fidelity, comprehensive Lesson Notes.
-Return markdown formatted text containing:
-1. Executive Summary & Historical Background.
-2. Core Conceptual Theories.
-3. Rigorous mathematical formulation using standard LaTeX (use standard equations like 'i\\hbar \\frac{\\partial}{\\partial t}\\Psi = \\hat{H}\\Psi' inside text blocks, do not wrap in double dollar signs unless they are centered equations).
-4. Concrete regional or real-world industrial application.
-5. 3 Socratic discussion questions for seminar work.
-Do not use conversational filler. Be extremely formal and scholarly.`;
-    prompt = `Compose University-level Lesson Notes for the topic: "${topic}" targeted at the "${level}" level. ${customPrompt}`;
-  } else if (type === "quiz") {
-    systemInstruction = `You are a Socratic Evaluation Expert. Your goal is to generate a deep diagnostic Active Recall Quiz.
-Superficial definitions promote copy-paste learning. Your quiz must verify deep conceptual understanding, causal links, and problem-solving capacities.
-Return markdown formatted text containing:
-1. A brief overview of the evaluation strategy.
-2. 3 Conceptual Short-Answer Questions with Socratic guiding prompts.
-3. 2 Analytical Multiple-Choice Questions with complex, plausible distractors and a note explaining the conceptual trap in the wrong options.
-4. 1 Practical Mathematical/Case-Study Challenge requiring derivation or workflow breakdown.`;
-    prompt = `Compose a conceptual diagnostic Quiz for the topic: "${topic}" targeted at the "${level}" level. ${customPrompt}`;
-  } else if (type === "guide") {
-    systemInstruction = `You are an Academic Marking Examiner. Your goal is to write a highly detailed Marking Guide and Solutions Blueprint.
-Your solutions must be rigorous and specify exactly how to evaluate a student's answer.
-Return markdown formatted text containing:
-1. Grading philosophy (Recall Accuracy vs. Socratic Analytical Depth).
-2. Step-by-step solutions for the Socratic conceptual questions, specifying the crucial 'neural keywords' or axioms the student must mention.
-3. Detailed mathematical proofs or conceptual derivations for the practical challenge.
-4. Rubric scoring scale (Novice, Proficient, Master) with clear performance descriptors.`;
-    prompt = `Compose a comprehensive Marking Guide & Solutions Blueprint for a Quiz on the topic: "${topic}" targeted at the "${level}" level. ${customPrompt}`;
-  } else {
-    return res.status(400).json({ error: "Unsupported generation type: " + type });
-  }
+Student Question: "${question}"`
+              }]
+            }
+          ]
+        });
 
-  if (ai) {
-    try {
-      const response = await generateContentWithFallback(ai, {
-        model: "gemini-3.5-flash",
-        contents: [
-          { role: "user", parts: [{ text: `${systemInstruction}\n\nTask:\n${prompt}` }] }
-        ]
-      });
-
-      const responseText = response.text;
-      if (responseText) {
-        return res.json({ result: responseText });
+        const text = response.text;
+        if (text) {
+          return res.json({ reply: text });
+        }
+      } catch (err: any) {
+        console.error("Teacher Lens Gemini call failed, using Socratic lecturer fallback:", err);
       }
-      throw new Error("Empty model response generated.");
-    } catch (apiErr: any) {
-      console.error("Gemini teacher generation failed, applying Socratic fallback:", apiErr);
     }
-  }
 
-  // High-fidelity fallback generating complete pedagogical templates in case Gemini is not set up
-  let fallbackResult = "";
-  if (type === "notes") {
-    fallbackResult = `# Rigorous Academic Lesson Notes: ${topic}
-**Target Level:** ${level}
-**Generated by:** Epselon Educational Intelligence Layer
+    // High-fidelity Socratic lecturer fallback
+    const fallbackReply = `### Examiner's Perspective on "${question}":
 
----
+When grading university scripts on **${topic}**, examiners look closely at your **logical continuity** rather than just a final number or definition.
 
-## 1. Executive Summary & Historical Background
-The study of **${topic}** represents a paradigm shift in our understanding of complex systems. Historically originating from the need to balance structural invariants with dynamic variables, this topic unifies multiple disparate frameworks.
+1. **Avoid the common trap:** Students often conflate core variables when rephrasing definitions under exam stress.
+2. **Marking criteria:** Always write down the base governing principle first, substitute standard units, and state what the answer physically means.
+3. **Lecturer Advice:** Imagine the system in motion before writing your equations—intuition prevents unforced errors!`;
 
-## 2. Core Conceptual Theories
-The system is modeled by examining how its intrinsic states propagate over time. Rather than relying on simple linear approximations, modern theory treats these as topological manifolds governed by systemic boundary criteria.
-
-## 3. Mathematical Formulations
-Let $\\Psi(\\mathbf{r}, t)$ represent the density amplitude state of the system. The fundamental wave equation governing this propagation is:
-
-$$i\\hbar \\frac{\\partial\\Psi}{\\partial t} = \\hat{H}\\Psi$$
-
-Where:
-* $\\hat{H}$ is the Hamiltonian differential operator corresponding to total system energy.
-* $\\hbar$ represents the reduced Planck constant of action.
-
-Additionally, to ensure the state remains physically normalizable across infinite boundaries, the normalization constraint must hold:
-
-$$\\int_{-\\infty}^{\\infty} |\\Psi(x)|^2 dx = 1$$
-
-## 4. Industrial & Regional Infrastructure Application
-A notable modern implementation is found in the optimization of decentralized microgrids. By simulating the distribution waves under high thermal load, grid managers in developing energy cooperatives apply these exact state matrices to balance solar arrays in real time.
-
-## 5. Seminar Discussion Prompts
-1. Why does the normalization integral diverge if we omit the boundary barriers?
-2. Detail how high-load state collapses simulate quantum measurement decoherence.
-
----
-*Note: This material is registered in the Epselon Socratic Database.*`;
-  } else if (type === "quiz") {
-    fallbackResult = `# Diagnostic Active Recall Quiz: ${topic}
-**Target Academic Group:** ${level}
-*Pedagogical Objective: Assess causal reasoning, mathematical derivation competence, and systemic intuition.*
-
----
-
-## Part A: Socratic Short-Answer (Concept Focus)
-1. **The Boundary Constraint Challenge:** Why is a simple unbounded linear state physically unacceptable to model ${topic}? Explain in terms of normalizability.
-2. **Causal Decoherence:** Describe the precise mechanism by which external environmental perturbations simulate wavefunction collapse in this system.
-
-## Part B: Multiple-Choice (Trap-Distractor Design)
-3. **Question 1:** What represents the physical scalar interpretation of the magnitude square of the wavefunction, $|\\Psi|^2$?
-   * A) The instantaneous absolute momentum of the sub-system.
-   * B) The probability density distribution of finding the particle. (Correct)
-   * C) The kinetic thermal dispersion rate.
-   * *Trap Analysis:* Choice C traps students confusing mechanical wave equations with classic thermodynamic heat diffusion coefficients.
-
-## Part C: Practical Analytical Challenge
-4. **The Potential Well Proof:** Derive the first-order eigenstates for a particle trapped in a one-dimensional infinite potential well of width $L$. Detail the boundary conditions at $x=0$ and $x=L$.`;
-  } else {
-    fallbackResult = `# Academic Marking Guide & Solutions Blueprint: ${topic}
-**Examiner Reference:** ${level} Level Evaluation
-
----
-
-## 1. Grading Philosophy & Core Rubric
-Evaluation must reward Socratic analytical depth, mathematical consistency, and precise terminology. Simple rote recall of definitions yields a maximum score of **Novice (40%)**. Genuine mastery requires the application of boundary constraints.
-
-## 2. Solutions & Key Term Criteria
-
-### Question 1: Unbounded Linear States
-* **Perfect Score (Master):** Student must identify that an unbounded state causes the normalization integral $\\int |\\Psi|^2 dx$ to diverge to infinity, which is physically impossible as total probability cannot exceed $1.00$ ($100\\%$).
-* **Keywords Required:** *Divergence*, *Normalization Constraint*, *Probability Density*.
-
-### Question 2: Potential Well Proof
-The general solution to the one-dimensional Schrödinger equation is:
-
-$$\\psi(x) = A\\sin(kx) + B\\cos(kx)$$
-
-Applying boundary condition $\\psi(0) = 0$ forces $B = 0$.
-Applying boundary condition $\\psi(L) = 0$ forces:
-
-$$A\\sin(kL) = 0 \\implies kL = n\\pi \\implies k = \\frac{n\\pi}{L}$$
-
-Thus, the normalized wavefunctions are:
-
-$$\\psi_n(x) = \\sqrt{\\frac{2}{L}} \\sin\\left(\\frac{n\\pi x}{L}\\right)$$
-
-## 3. Rubric Scoring Scale
-* **Master (90-100%):** Pristine derivations, rigorous physical context, zero mathematical omissions.
-* **Proficient (70-89%):** Correct equations but minor descriptive gaps in boundary transitions.
-* **Novice (Below 60%):** Superficial recall, copy-paste definitions, lacks mathematical proofs.`;
-  }
-
-  res.json({ result: fallbackResult });
+    res.json({ reply: fallbackReply });
   } catch (err: any) {
-    console.error("Unhandled error in /api/teacher/generate:", err);
-    res.status(500).json({ error: "Internal Server Error" });
+    console.error("Error in /api/study/teacher-lens-chat:", err);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 

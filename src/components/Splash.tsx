@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Cpu, Terminal, Compass, Sparkles } from "lucide-react";
 import RadialPulseLoader from "../../components/ui/loading-animation";
@@ -11,14 +11,23 @@ interface SplashProps {
 export default function Splash({ onComplete }: SplashProps) {
   const [progress, setProgress] = useState(0);
   const [statusText, setStatusText] = useState("Calibrating educational nodes...");
+  const onCompleteRef = useRef(onComplete);
 
   useEffect(() => {
-    // Elegant incremental load sequence
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
+
+  useEffect(() => {
+    let timeoutId: any = null;
     const interval = setInterval(() => {
       setProgress((prev) => {
         if (prev >= 100) {
           clearInterval(interval);
-          setTimeout(onComplete, 600);
+          if (!timeoutId) {
+            timeoutId = setTimeout(() => {
+              onCompleteRef.current();
+            }, 600);
+          }
           return 100;
         }
         
@@ -31,8 +40,11 @@ export default function Splash({ onComplete }: SplashProps) {
       });
     }, 150);
 
-    return () => clearInterval(interval);
-  }, [onComplete]);
+    return () => {
+      clearInterval(interval);
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, []);
 
   return (
     <div className="fixed inset-0 bg-[#0c0e12] flex flex-col items-center justify-center text-white z-50 overflow-hidden font-sans select-none">

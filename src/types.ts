@@ -7,6 +7,7 @@ export interface UserPreferences {
   taxonomyFocus: "Analyze & Evaluate" | "Apply & Understand" | "Create & Synthesize";
   contextAwareness: boolean;
   selectedVoiceId?: string;
+  language?: "en" | "fr";
   
   // AI Workspace preferences
   selectedProvider?: string;
@@ -27,6 +28,7 @@ export interface ProviderConnection {
   latency: string;
   lastSynced?: string;
   features: string[];
+  syncExistingChats?: boolean;
 }
 
 export interface UserProfile {

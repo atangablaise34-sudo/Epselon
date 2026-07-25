@@ -6,6 +6,7 @@ import {
   Info, ShieldAlert, Award, Layers, Target, Database, GitMerge
 } from "lucide-react";
 import { ChatMessage } from "../../types";
+import MathFormula from "../../components/MathFormula";
 
 interface TransformedLessonViewProps {
   message: ChatMessage;
@@ -239,17 +240,7 @@ export default function TransformedLessonView({ message, topicName }: Transforme
 
               {/* Formula Panel */}
               {equation && (
-                <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 text-center space-y-1.5 shadow-inner">
-                  <span className="text-[8px] font-mono text-slate-500 uppercase tracking-widest block">
-                    Key Formula Box
-                  </span>
-                  <div className="text-sm font-mono text-blue-400 select-all py-1">
-                    {equation}
-                  </div>
-                  <span className="text-[9px] text-slate-600 font-light block">
-                    LaTeX compliant. Double click to copy proof string.
-                  </span>
-                </div>
+                <MathFormula latex={equation} label="Governing Mathematical Formula" />
               )}
             </motion.div>
           )}

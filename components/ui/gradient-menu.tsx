@@ -4,8 +4,7 @@ import {
   Brain, 
   Cpu, 
   Layers, 
-  Settings,
-  GraduationCap
+  Settings
 } from 'lucide-react';
 
 export interface MenuItem {
@@ -20,45 +19,42 @@ interface GradientMenuProps {
   currentRoute?: string;
   onNavigate?: (route: string) => void;
   theme?: string;
+  language?: string;
 }
 
 export default function GradientMenu({ 
   currentRoute = "nexus", 
   onNavigate = () => {}, 
-  theme = "obsidian" 
+  theme = "obsidian",
+  language = "en"
 }: GradientMenuProps) {
+  const isFr = (language || "en").startsWith("fr");
+
   const menuItems: MenuItem[] = [
     { 
       id: 'workspace', 
-      title: 'AI Workspace', 
+      title: isFr ? 'Espace étude' : 'Study Workspace', 
       icon: <Cpu className="w-5 h-5" />, 
       gradientFrom: '#1711BF', 
       gradientTo: '#371BF2' 
     },
     { 
       id: 'nexus', 
-      title: 'Nexus', 
+      title: isFr ? 'Carte sujets' : 'Knowledge Map', 
       icon: <Network className="w-5 h-5" />, 
       gradientFrom: '#371BF2', 
       gradientTo: '#705FD9' 
     },
     { 
       id: 'flashcards', 
-      title: 'Recall', 
+      title: isFr ? 'Cartes' : 'Flashcards', 
       icon: <Layers className="w-5 h-5" />, 
       gradientFrom: '#705FD9', 
       gradientTo: '#9C8BD9' 
     },
     { 
-      id: 'teacher', 
-      title: 'Teacher', 
-      icon: <GraduationCap className="w-5 h-5" />, 
-      gradientFrom: '#9C8BD9', 
-      gradientTo: '#371BF2' 
-    },
-    { 
       id: 'settings', 
-      title: 'System', 
+      title: isFr ? 'Paramètres' : 'Settings', 
       icon: <Settings className="w-5 h-5" />, 
       gradientFrom: '#371BF2', 
       gradientTo: '#1711BF' 

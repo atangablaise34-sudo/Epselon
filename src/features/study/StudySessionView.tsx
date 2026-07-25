@@ -1,19 +1,25 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { 
   Send, Brain, Cpu, Clock, CheckCircle2, Circle, BookOpen, 
   ChevronRight, Sparkles, AlertCircle, RefreshCw, Lightbulb, HelpCircle, FileText, Eye,
   ChevronDown, Check, X, Edit2, ArrowRight, Wand2, Paperclip, Camera, Mic, Link,
-  Folder, StopCircle, LogOut, Play, CameraOff, MessageSquare
+  Folder, StopCircle, LogOut, Play, CameraOff, MessageSquare, GraduationCap, ArrowLeft, XCircle
 } from "lucide-react";
 import { UserProfile, StudySession, ChatMessage } from "../../types";
 import { sendChatMessage, createStudySession, updatePreferences, clearStudySession, updateSessionIntent } from "../../lib/api";
 import RadialPulseLoader from "../../../components/ui/loading-animation";
 import TransformedLessonView from "./TransformedLessonView";
+import MathFormula from "../../components/MathFormula";
+import FormattedMarkdown from "../../components/FormattedMarkdown";
 import EpselonLogo from "../../components/EpselonLogo";
 import LearningCanvasView from "./LearningCanvasView";
 import FocusModeOverlay from "../../components/FocusModeOverlay";
 import { EventBus } from "../../lib/EventBus";
+import { EducationalContextEngine, EducationalContextPacket } from "../../lib/protocol/educationalContextEngine";
+import EducationalContextDetailsModal from "../../components/EducationalContextDetailsModal";
+import { AdaptiveLearningAssessmentEngine } from "../../lib/protocol/adaptiveAssessmentEngine";
+import TeacherLensOverlay from "./TeacherLensOverlay";
 
 interface ReflectionCard {
   type: "tf" | "mc" | "fib" | "match" | "arrange" | "short" | "scenario";
@@ -29,6 +35,10 @@ interface ReflectionCard {
   correctKeyword?: string;
   feedbackCorrect: string;
   feedbackIncorrect: string;
+  stageName?: string;
+  objectiveText?: string;
+  conceptText?: string;
+  explanationWhy?: string;
 }
 
 const PROVIDER_DEFAULT_MODELS: Record<string, string> = {
@@ -113,6 +123,8 @@ export default function StudySessionView({
   const [preSelectedIntent, setPreSelectedIntent] = useState<string>("Study");
   const [pipelineStep, setPipelineStep] = useState(0);
   const [coachOriginal, setCoachOriginal] = useState("");
+  const [activeEcePacket, setActiveEcePacket] = useState<EducationalContextPacket | null>(null);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [rememberAIChoice, setRememberAIChoice] = useState(false);
   const [selectedAI, setSelectedAI] = useState(user.preferences.selectedProvider || "gemini");
 
@@ -507,244 +519,61 @@ export default function StudySessionView({
   const [promptedSessions, setPromptedSessions] = useState<Record<string, boolean>>({});
   const [submittingReflection, setSubmittingReflection] = useState(false);
 
+  // Stage 9: Teacher Lens Integration States
+  const [showTeacherLens, setShowTeacherLens] = useState(false);
+  const [isSlidingLeftForTeacherLens, setIsSlidingLeftForTeacherLens] = useState(false);
+  const [isReviewingQuestions, setIsReviewingQuestions] = useState(false);
+
   // Advanced Interactive Reflection States
   const [correctCount, setCorrectCount] = useState(0);
   const [isCardAnswerCorrect, setIsCardAnswerCorrect] = useState<boolean | null>(null);
   const [matchAnswers, setMatchAnswers] = useState<Record<string, string>>({});
   const [arrangedSteps, setArrangedSteps] = useState<string[]>([]);
 
-  const getReflectionCardsForTopic = (topicName: string): ReflectionCard[] => {
-    const topic = topicName ? topicName.toLowerCase() : "general";
-    
-    if (topic.includes("newton") || topic.includes("force") || topic.includes("acceleration") || topic.includes("motion")) {
-      return [
-        {
-          type: "tf" as const,
-          question: "Newton's Second Law asserts that the vector acceleration of an object is directly proportional to its mass, provided the net force remains constant.",
-          options: ["True", "False"],
-          correctIdx: 1, // False
-          feedbackCorrect: "Correct! Force is directly proportional to acceleration, but mass is inversely proportional to acceleration. (a = F/m).",
-          feedbackIncorrect: "Not quite. Recall the equation: a = F/m. Acceleration is inversely proportional to mass. Mass acts as inertia resisting acceleration."
-        },
-        {
-          type: "mc" as const,
-          question: "An agricultural transport vehicle and a light mountain bicycle are both pushed on a muddy path with the exact same net force vector. Which physical outcome is true?",
-          options: [
-            "Both vehicles achieve identical acceleration due to equal forces.",
-            "The bicycle accelerates significantly more because it has less inertial mass.",
-            "The transport vehicle accelerates more due to its larger ground surface area.",
-            "Neither vehicle accelerates because mass scales directly with friction."
-          ],
-          correctIdx: 1,
-          feedbackCorrect: "Excellent thinking. Since a = F/m, a smaller mass yields a dramatically larger acceleration for the same force.",
-          feedbackIncorrect: "Incorrect. Recall that acceleration is inversely proportional to mass. The vehicle with less mass (the bicycle) accelerates more."
-        },
-        {
-          type: "fib" as const,
-          question: "Calculate the net force (in Newtons) required to accelerate a 5 kg object at a rate of 3 m/s²: Force = [______] Newtons.",
-          correctAnswers: ["15", "15n", "15 newtons"],
-          feedbackCorrect: "Correct! F = m * a, so 5 kg * 3 m/s² = 15 Newtons. Perfect physical calculation.",
-          feedbackIncorrect: "Incorrect. Use Newton's second law: Force = mass * acceleration. Here, 5 kg * 3 m/s² = 15 N."
-        },
-        {
-          type: "match" as const,
-          question: "Match the following physical variables of classical mechanics with their correct conceptual definitions:",
-          leftItems: ["Inertial Mass (m)", "Net Force (F)", "Acceleration (a)"],
-          rightItems: [
-            "The dynamic cause of motion that changes an object's velocity",
-            "The qualitative measure of an object's resistance to acceleration",
-            "The rate of change of velocity vector per unit time"
-          ],
-          correctPairs: {
-            "Inertial Mass (m)": "The qualitative measure of an object's resistance to acceleration",
-            "Net Force (F)": "The dynamic cause of motion that changes an object's velocity",
-            "Acceleration (a)": "The rate of change of velocity vector per unit time"
-          } as Record<string, string>,
-          feedbackCorrect: "Superb matching! Mass represents inertia (resistance), Force represents the active push/pull, and Acceleration represents the resulting speed/direction change.",
-          feedbackIncorrect: "Incorrect matching. Remember: Mass is resistance, Force is the active cause of velocity changes, and Acceleration is the rate of velocity change."
-        },
-        {
-          type: "short" as const,
-          question: "Explain in your own words: If a rocket in space burns fuel continuously, its mass decreases while its thrust force remains constant. How does this affect its acceleration? Why?",
-          placeholder: "Describe the relationship using the components of F = ma...",
-          correctKeyword: "increase",
-          feedbackCorrect: "Magnificent explanation! As mass decreases under constant force, acceleration must increase progressively since mass is in the denominator (a = F/m).",
-          feedbackIncorrect: "Insightful attempt. Make sure to note that as mass decreases under a constant force, the acceleration increases because mass acts as resistance to force (a = F/m)."
-        }
-      ];
-    }
-
-    if (topic.includes("quantum") || topic.includes("wave") || topic.includes("schrödinger") || topic.includes("physics")) {
-      return [
-        {
-          type: "tf" as const,
-          question: "The Born rule states that the absolute square of a wavefunction's amplitude, |ψ|², represents the exact classical trajectory of a particle.",
-          options: ["True", "False"],
-          correctIdx: 1, // False
-          feedbackCorrect: "Correct! |ψ|² represents a probability density, not a definite classical trajectory.",
-          feedbackIncorrect: "Not quite. In quantum mechanics, particles do not have classical trajectories; |ψ|² represents a probability density of finding the particle."
-        },
-        {
-          type: "mc" as const,
-          question: "What is the physical significance of the mathematical 'normalization' condition for a quantum wavefunction?",
-          options: [
-            "It guarantees that the quantum energy states are strictly quantized.",
-            "It ensures that the total probability of finding the particle anywhere in space is exactly 1.",
-            "It forces the wavefunction to become real-valued at spatial boundaries.",
-            "It limits the particle speed to remain below light speed."
-          ],
-          correctIdx: 1,
-          feedbackCorrect: "Excellent! Since the particle must exist somewhere, the integral of |ψ|² over all space must equal 1 (100% probability).",
-          feedbackIncorrect: "Incorrect. The normalization condition ensures that the sum (integral) of all probabilities over all space is exactly 1."
-        },
-        {
-          type: "fib" as const,
-          question: "According to wave-particle duality, the wavelength of a particle is given by Planck's constant divided by its [______].",
-          correctAnswers: ["momentum", "p", "linear momentum"],
-          feedbackCorrect: "Correct! λ = h/p, where p represents the momentum of the particle. Perfect duality mapping.",
-          feedbackIncorrect: "Incorrect. The formula is λ = h/p, where p is momentum. (Wavelength is inversely proportional to momentum)."
-        },
-        {
-          type: "arrange" as const,
-          question: "Arrange the chronological sequence of events when a quantum wavefunction in superposition undergoes measurement:",
-          steps: [
-            "A physical system exists in a coherent superposition of multiple eigenstates.",
-            "A measurement apparatus introduces an external measurement operator.",
-            "The superposition state collapses instantaneously to a single eigenstate.",
-            "The detector registers a single discrete eigenvalue corresponding to that state."
-          ],
-          feedbackCorrect: "Incredibly accurate sequence! This represents the standard Copenhagen interpretation of measurement and collapse.",
-          feedbackIncorrect: "Incorrect order. Remember: Coherent superposition exists first, then the operator interacts, then collapse occurs, and finally a discrete eigenvalue is registered."
-        },
-        {
-          type: "short" as const,
-          question: "Scenario: A quantum particle encounters a potential energy barrier slightly higher than its total mechanical energy. In your own words, explain how it can appear on the other side.",
-          placeholder: "Explain using wavefunctions, exponential decay, and non-zero boundary probability...",
-          correctKeyword: "tunnel",
-          feedbackCorrect: "Fantastic Socratic reasoning! The wavefunction does not drop to zero inside the barrier, but decays exponentially, leaving a non-zero probability amplitude on the other side (Quantum Tunneling).",
-          feedbackIncorrect: "Good try. Recall that inside the barrier, the wavefunction decays exponentially rather than dropping to zero. This leaves a small non-zero probability on the other side, allowing Quantum Tunneling."
-        }
-      ];
-    }
-
-    if (topic.includes("ohm") || topic.includes("current") || topic.includes("voltage") || topic.includes("circuit") || topic.includes("electricity")) {
-      return [
-        {
-          type: "tf" as const,
-          question: "Ohm's Law states that for a constant resistance, doubling the voltage across a conductor will cut the electrical current in half.",
-          options: ["True", "False"],
-          correctIdx: 1, // False
-          feedbackCorrect: "Correct! Under constant resistance, current is directly proportional to voltage (I = V/R), so doubling voltage doubles current.",
-          feedbackIncorrect: "Incorrect. Ohm's Law is V = I * R, or I = V/R. Under constant resistance, doubling voltage doubles current."
-        },
-        {
-          type: "mc" as const,
-          question: "Using our fluid analogy, which of the following is the correct mapping of electrical circuit elements to hydraulic parameters?",
-          options: [
-            "Voltage = Narrow valve | Current = Water volume | Resistance = Pump pressure",
-            "Voltage = Pump pressure | Current = Volumetric water flow rate | Resistance = Constricted narrowing in pipe",
-            "Voltage = Water pipe diameter | Current = Flow turbulence | Resistance = Gravitational head",
-            "Voltage = Flow velocity | Current = Pressure waves | Resistance = Friction coefficient"
-          ],
-          correctIdx: 1,
-          feedbackCorrect: "Spectacular! Voltage is the driving pressure, current is the fluid flow rate, and resistance is any narrowing that constricts flow.",
-          feedbackIncorrect: "Not quite. Remember: Voltage represents pump pressure, current is the water flow rate, and resistance is a narrowing in the pipes."
-        },
-        {
-          type: "fib" as const,
-          question: "If a circuit has a voltage source of 12 Volts and a resistor of 4 Ohms, the resulting current is [______] Amperes.",
-          correctAnswers: ["3", "3a", "3 amperes", "3 amps"],
-          feedbackCorrect: "Correct! I = V / R, so 12 V / 4 Ohms = 3 Amperes.",
-          feedbackIncorrect: "Incorrect. I = V / R, so 12 / 4 = 3 Amperes."
-        },
-        {
-          type: "match" as const,
-          question: "Match the following circuit elements with their fundamental electrical metrics:",
-          leftItems: ["Electromotive Force (V)", "Intensity of Flow (I)", "Opposition (R)"],
-          rightItems: [
-            "Measured in Amperes (A), representing charge rate per second",
-            "Measured in Volts (V), representing potential work per unit charge",
-            "Measured in Ohms (Ω), representing restriction of flow"
-          ],
-          correctPairs: {
-            "Electromotive Force (V)": "Measured in Volts (V), representing potential work per unit charge",
-            "Intensity of Flow (I)": "Measured in Amperes (A), representing charge rate per second",
-            "Opposition (R)": "Measured in Ohms (Ω), representing restriction of flow"
-          } as Record<string, string>,
-          feedbackCorrect: "Excellent matching. Volts represent potential, Amperes represent flow intensity, and Ohms represent restriction.",
-          feedbackIncorrect: "Incorrect matches. Remember: V is Potential (Volts), I is Flow (Amperes), and R is Resistance (Ohms)."
-        },
-        {
-          type: "short" as const,
-          question: "Explain in your own words: What happens to the current in a circuit if you place two identical resistors in series instead of a single resistor? Why?",
-          placeholder: "Explain using total resistance, Ohm's law, and division of flow...",
-          correctKeyword: "hal", // matches half, halved, halves
-          feedbackCorrect: "Spot on! Placing resistors in series doubles the total resistance. Since current is inversely proportional to resistance (I = V/R), current is halved.",
-          feedbackIncorrect: "Good try. Placing resistors in series doubles the total resistance, which restricts current flow, cutting the current in half (I = V / 2R)."
-        }
-      ];
-    }
-
-    // Default Fallback
-    return [
-      {
-        type: "tf" as const,
-        question: `In study modules of "${topicName}", committing facts and definitions to short-term memory is more important than building intuitive, relational mental models.`,
-        options: ["True", "False"],
-        correctIdx: 1, // False
-        feedbackCorrect: "Correct! Epselon focuses on active retention and understanding how concepts fit together, rather than dry rote memorization.",
-        feedbackIncorrect: "Not quite. Rote memorization fades quickly. Understanding structural relationships creates lasting neural pathways."
-      },
-      {
-        type: "mc" as const,
-        question: `When analyzing the core causal structure of "${topicName}", which factor is most crucial to avoid system failures?`,
-        options: [
-          "Treating all environmental inputs as perfectly static, insulated constants.",
-          "Verifying how localized boundary conditions and dynamic variables adjust to external stresses.",
-          "Ignoring minor secondary metrics to optimize code output quickly.",
-          "Excluding human user inputs from all operational loops."
-        ],
-        correctIdx: 1,
-        feedbackCorrect: "Excellent! Real-world systems are dynamic and must react resiliently to external boundary stresses.",
-        feedbackIncorrect: "Incorrect. Standard engineering systems fail because they treat environmental inputs as constants instead of dynamic bounds."
-      },
-      {
-        type: "fib" as const,
-        question: `To ensure active retention of "${topicName}", you should periodically practice active [______] instead of passively highlighting or re-reading lesson content.`,
-        correctAnswers: ["recall", "retrieval", "reflection", "reconstruction"],
-        feedbackCorrect: "Spot on! Active recall and reflection force your brain to retrieve knowledge, strengthening cognitive synapses.",
-        feedbackIncorrect: "Incorrect. The missing term is 'recall' or 'reflection' (forcing active mental retrieval)."
-      },
-      {
-        type: "match" as const,
-        question: "Match the following structural stages of Socratic education with their primary learning outcomes:",
-        leftItems: ["Active Analogy", "Boundary Stresses", "Socratic Evaluation"],
-        rightItems: [
-          "Establishes a solid intuitive bridge using highly familiar conceptual maps",
-          "Tests system stability thresholds under sudden load variations",
-          "Demonstrates authentic conceptual retainment rather than simple reading"
-        ],
-        correctPairs: {
-          "Active Analogy": "Establishes a solid intuitive bridge using highly familiar conceptual maps",
-          "Boundary Stresses": "Tests system stability thresholds under sudden load variations",
-          "Socratic Evaluation": "Demonstrates authentic conceptual retainment rather than simple reading"
-        } as Record<string, string>,
-        feedbackCorrect: "Perfect matching! These three stages form the backbone of the Epselon educational architecture.",
-        feedbackIncorrect: "Incorrect matching. Analogy builds intuition, Boundary Stresses analyze thresholds, and Socratic Evaluation verifies understanding."
-      },
-      {
-        type: "short" as const,
-        question: `In your own words, summarize how the core concepts of "${topicName}" relate to previous modules, and how they apply to real-world problem solving.`,
-        placeholder: "Detail the mechanisms, system inputs, and ultimate outcomes...",
-        correctKeyword: "system",
-        feedbackCorrect: "Insightful reflection! Your ability to synthesize connections and detail the dynamic interactions demonstrates strong conceptual retainment.",
-        feedbackIncorrect: "A good start. To solidify learning, try expanding on how the parts of this topic actively interact as a system under external loads."
-      }
-    ];
-  };
-
   const activeSession = sessions.find(s => s.id === activeSessionId);
-  const reflectionCards = getReflectionCardsForTopic(activeSession?.focus || "General Science");
+
+  const reflectionCards = useMemo<ReflectionCard[]>(() => {
+    const topicName = activeSession?.focus || "General Science";
+    const latestMentorMsg = activeSession?.messages?.slice().reverse().find(m => m.sender === 'mentor')?.text || "";
+    const pkg = AdaptiveLearningAssessmentEngine.process({
+      lessonText: latestMentorMsg,
+      topicName: topicName,
+      academicLevel: user.academicLevel,
+      discipline: user.faculty || user.department
+    });
+
+    const mapped = pkg.questions.map(q => ({
+      type: q.type,
+      question: q.question,
+      options: q.options,
+      correctIdx: q.correctIdx,
+      correctAnswers: q.correctAnswers,
+      leftItems: q.leftItems,
+      rightItems: q.rightItems,
+      correctPairs: q.correctPairs,
+      steps: q.steps,
+      placeholder: q.placeholder,
+      correctKeyword: q.correctKeyword,
+      feedbackCorrect: q.feedbackCorrect,
+      feedbackIncorrect: q.feedbackIncorrect,
+      stageName: q.stageName,
+      objectiveText: q.objectiveText,
+      conceptText: q.conceptText,
+      explanationWhy: q.explanationWhy
+    }));
+
+    // Deduplicate mapped reflection cards by question text
+    const uniqueCards: ReflectionCard[] = [];
+    const seen = new Set<string>();
+    for (const card of mapped) {
+      const norm = card.question.trim().toLowerCase();
+      if (!seen.has(norm)) {
+        seen.add(norm);
+        uniqueCards.push(card);
+      }
+    }
+    return uniqueCards;
+  }, [activeSession?.id, activeSession?.focus, activeSession?.messages?.length, user.academicLevel, user.faculty, user.department]);
 
   // Auto-detect topic completion (Stage 8 Reflection Gateway)
   useEffect(() => {
@@ -852,6 +681,42 @@ export default function StudySessionView({
     }
   }, [currentCardIdx, reflectionActive]);
 
+  const handleJumpToCard = (targetIdx: number) => {
+    if (targetIdx === currentCardIdx || targetIdx < 0 || targetIdx >= reflectionCards.length) return;
+    
+    // Save current card response in answers array
+    const card = reflectionCards[currentCardIdx];
+    let currentAnswer = "";
+    if (card.type === "mc" || card.type === "tf") {
+      currentAnswer = mcAnswer !== null ? (card.options?.[mcAnswer] || "") : "";
+    } else if (card.type === "match") {
+      currentAnswer = Object.entries(matchAnswers).map(([k, v]) => `${k} -> ${v}`).join(", ");
+    } else if (card.type === "arrange") {
+      currentAnswer = arrangedSteps.join(" -> ");
+    } else {
+      currentAnswer = textAnswer;
+    }
+
+    const updatedAnswers = [...reflectionAnswers];
+    updatedAnswers[currentCardIdx] = currentAnswer;
+    setReflectionAnswers(updatedAnswers);
+
+    // Reset current active card input states
+    setTextAnswer("");
+    setMcAnswer(null);
+    setShowCardFeedback(false);
+    setCardFeedback("");
+    setIsCardAnswerCorrect(null);
+    
+    setCurrentCardIdx(targetIdx);
+  };
+
+  const handleRetryCard = () => {
+    setShowCardFeedback(false);
+    setCardFeedback("");
+    setIsCardAnswerCorrect(null);
+  };
+
   const handleVerifyCardAnswer = () => {
     const card = reflectionCards[currentCardIdx];
     let isCorrect = false;
@@ -884,9 +749,9 @@ export default function StudySessionView({
     setIsCardAnswerCorrect(isCorrect);
     if (isCorrect) {
       setCorrectCount(prev => prev + 1);
-      setCardFeedback(card.feedbackCorrect || "✓ Correct! Good thinking. You've demonstrated perfect understanding of this level.");
+      setCardFeedback(card.feedbackCorrect || "✓ Correct! Good thinking. You've demonstrated understanding of this level.");
     } else {
-      setCardFeedback(card.feedbackIncorrect || "Almost. There's a slight misalignment in your current conceptual mapping, let's persist!");
+      setCardFeedback(card.feedbackIncorrect || "Review required: There is a misalignment in your response. You can try again or proceed freely.");
     }
     setShowCardFeedback(true);
   };
@@ -896,16 +761,19 @@ export default function StudySessionView({
     let currentAnswer = "";
 
     if (card.type === "mc" || card.type === "tf") {
-      currentAnswer = card.options?.[mcAnswer ?? 0] || "";
+      currentAnswer = mcAnswer !== null ? (card.options?.[mcAnswer] || "") : "Skipped";
     } else if (card.type === "match") {
-      currentAnswer = Object.entries(matchAnswers).map(([k, v]) => `${k} -> ${v}`).join(", ");
+      currentAnswer = Object.entries(matchAnswers).length > 0 
+        ? Object.entries(matchAnswers).map(([k, v]) => `${k} -> ${v}`).join(", ")
+        : "Skipped";
     } else if (card.type === "arrange") {
-      currentAnswer = arrangedSteps.join(" -> ");
+      currentAnswer = arrangedSteps.length > 0 ? arrangedSteps.join(" -> ") : "Skipped";
     } else {
-      currentAnswer = textAnswer;
+      currentAnswer = textAnswer.trim() || "Skipped";
     }
 
-    const updatedAnswers = [...reflectionAnswers, currentAnswer];
+    const updatedAnswers = [...reflectionAnswers];
+    updatedAnswers[currentCardIdx] = currentAnswer;
     setReflectionAnswers(updatedAnswers);
 
     setTextAnswer("");
@@ -951,17 +819,30 @@ export default function StudySessionView({
     setPipelineStep(0);
     EventBus.publish("PROMPT_REFINEMENT_STARTED");
 
-    // Step-by-step pipeline progression
+    const focusTopic = activeSession?.focus || "General Discipline";
+    const provider = user.preferences?.selectedProvider || "Gemini 3.5 Flash";
+    const mode = preSelectedIntent ? `${preSelectedIntent} Mode` : "Study Mode";
+
+    // Process Educational Context Packet deterministically
+    const packet = EducationalContextEngine.process({
+      originalPrompt: original.trim(),
+      user,
+      sessionFocus: focusTopic,
+      provider,
+      mode,
+      knowledgeGraph: user.knowledgeGraph,
+    });
+
+    setActiveEcePacket(packet);
+
+    // Step-by-step indicator progression for context assembly
     let stepCount = 0;
     const stepInterval = setInterval(() => {
       stepCount++;
-      setPipelineStep(prev => Math.min(prev + 1, 4));
-    }, 350);
+      setPipelineStep(prev => Math.min(prev + 1, 5));
+    }, 300);
 
-    let enhanced = "";
-    let isConversational = false;
     try {
-      const focusTopic = activeSession?.focus || "General Science";
       const res = await fetch("/api/study/enhance-prompt", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -969,51 +850,29 @@ export default function StudySessionView({
       });
       if (res.ok) {
         const data = await res.json();
-        enhanced = data.enhancedPrompt;
-        isConversational = !!data.isConversational;
-      } else {
-        throw new Error("Backend enhancement failed");
+        if (data.ecePacket) {
+          setActiveEcePacket(data.ecePacket);
+        }
       }
     } catch (err) {
-      console.warn("Falling back to local client-side prompt enhancement:", err);
-      const acadLevel = user.academicLevel || "Undergraduate Student";
-      const uni = user.university || "University";
-      const dept = user.department || "Science";
-      const style = user.learningStyle || "Visual";
-      const isGreeting = /^(hi|hello|hey|thanks|how are you|good morning|i'm ready|let's start|ready|what's up|yes|no|ok|okay|got it|cool|understood|i see|make sense|makes sense|awesome|great|good|nice)/i.test(original.trim());
-      enhanced = isGreeting ? original : `Hi! I'm a ${acadLevel} studying ${dept} at ${uni}. With my ${style} learning style, could you explain "${original.trim()}" in an intuitive, deep way? Please lead with relatable everyday analogies, and ask me a Socratic checkpoint question before writing out final formal proofs. Thanks!`;
-      isConversational = isGreeting;
+      console.warn("Using local ECE packet assembly:", err);
     }
 
     clearInterval(stepInterval);
-    setPipelineStep(4);
+    setPipelineStep(5);
 
-    if (isConversational) {
-      // Bypass the card typing effect entirely for conversational prompts
+    if (packet.analysis.isCasual) {
       setFlowState('idle');
       await executeSocraticDiscourseDispatch(original, true);
       return;
     }
 
-    // Character typewriter effect
-    const totalLength = enhanced.length;
+    // Preserve student prompt 100% intact
     setInputText(original);
-
-    const charInterval = setInterval(() => {
-      setInputText(prev => {
-        if (prev.length >= totalLength) {
-          clearInterval(charInterval);
-          setPipelineStep(5);
-          EventBus.publish("PROMPT_REFINEMENT_COMPLETED");
-          setTimeout(() => {
-            setFlowState('show_card');
-          }, 400);
-          return enhanced;
-        }
-        const stepSize = Math.max(1, Math.ceil((totalLength - original.length) / 50));
-        return enhanced.slice(0, Math.min(totalLength, prev.length + stepSize));
-      });
-    }, 30);
+    EventBus.publish("PROMPT_REFINEMENT_COMPLETED");
+    setTimeout(() => {
+      setFlowState('show_card');
+    }, 400);
   };
 
   useEffect(() => {
@@ -1244,18 +1103,27 @@ export default function StudySessionView({
               )}
 
               {/* Reflection Gateway Slide-Up Overlay Panel */}
-              <AnimatePresence>
-                {reflectionActive && (
+              <AnimatePresence mode="sync">
+                {reflectionActive && !showTeacherLens && (
                   <div className="absolute inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
                     <motion.div
                       initial={{ y: "100vh", opacity: 0 }}
-                      animate={{ y: 0, opacity: 1 }}
-                      exit={{ y: "100vh", opacity: 0 }}
+                      animate={{ 
+                        x: isSlidingLeftForTeacherLens ? -350 : 0, 
+                        opacity: isSlidingLeftForTeacherLens ? 0 : 1, 
+                        scale: isSlidingLeftForTeacherLens ? 0.9 : 1,
+                        y: 0 
+                      }}
+                      exit={{ 
+                        x: -350, 
+                        opacity: 0, 
+                        scale: 0.9 
+                      }}
                       transition={{ 
                         type: "spring", 
-                        damping: 24, 
-                        stiffness: 140, 
-                        mass: 1
+                        damping: 28, 
+                        stiffness: 110, 
+                        mass: 0.9
                       }}
                       className="relative w-full max-w-2xl bg-[#090c15] border border-blue-900/35 rounded-3xl p-6 sm:p-8 shadow-[0_25px_60px_rgba(0,0,0,0.8)] flex flex-col justify-between overflow-hidden"
                     >
@@ -1276,62 +1144,68 @@ export default function StudySessionView({
                               transition={{ duration: 0.35, ease: "easeInOut" }}
                               className="space-y-5"
                             >
-                              {/* Header Meta Info */}
-                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-900/60 pb-3">
+                              {/* Header Meta Info + Exit X Button */}
+                              <div className="flex items-start justify-between gap-3 border-b border-slate-900/60 pb-3">
                                 <div>
                                   <span className="text-[10px] font-mono text-slate-500 uppercase tracking-wider block">Active Topic Focus</span>
                                   <span className="text-xs font-serif italic text-blue-400 font-semibold truncate block max-w-sm">
-                                    {activeSession?.focus || "Socratic Investigation"}
+                                    {activeSession?.focus || "Guided AI Study Investigation"}
                                   </span>
                                 </div>
-                                <div className="sm:text-right">
-                                  <span className="text-[10px] font-mono text-slate-500 uppercase tracking-wider block">Progress State</span>
-                                  <span className="text-xs font-mono text-slate-300 font-bold block">
-                                    Question {currentCardIdx + 1} of {reflectionCards.length}
-                                  </span>
+                                <div className="flex items-center gap-3 shrink-0">
+                                  <div className="text-right">
+                                    <span className="text-[10px] font-mono text-slate-500 uppercase tracking-wider block">Progress State</span>
+                                    <span className="text-xs font-mono text-slate-300 font-bold block">
+                                      Card {currentCardIdx + 1} of {reflectionCards.length}
+                                    </span>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => setReflectionActive(false)}
+                                    className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-800 transition-colors cursor-pointer"
+                                    title="Close Flashcards"
+                                  >
+                                    <X className="w-4 h-4" />
+                                  </button>
                                 </div>
                               </div>
 
-                              {/* Progress Status Bar (Dots + Remaining Estimate) */}
-                              <div className="flex items-center justify-between bg-slate-950/70 px-4 py-2.5 rounded-xl border border-slate-900/80">
-                                <div className="flex items-center gap-1.5">
+                              {/* Clickable Progress Pills (Card 1, Card 2, Card 3, Card 4...) */}
+                              <div className="flex items-center justify-between bg-slate-950/70 px-4 py-2.5 rounded-xl border border-slate-900/80 overflow-x-auto no-scrollbar gap-2">
+                                <div className="flex items-center gap-1.5 shrink-0">
                                   {reflectionCards.map((_, idx) => {
                                     const isCurrent = idx === currentCardIdx;
                                     const isDone = idx < currentCardIdx;
                                     return (
-                                      <span 
-                                        key={idx} 
-                                        className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
-                                          isCurrent 
-                                            ? "bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)] scale-110" 
-                                            : isDone 
-                                            ? "bg-emerald-500" 
-                                            : "bg-slate-800"
+                                      <button
+                                        key={idx}
+                                        type="button"
+                                        onClick={() => handleJumpToCard(idx)}
+                                        className={`px-2.5 py-1 rounded-lg text-xs font-mono transition-all flex items-center gap-1 cursor-pointer shrink-0 ${
+                                          isCurrent
+                                            ? "bg-blue-600 text-white shadow-[0_0_10px_rgba(59,130,246,0.5)] font-bold ring-1 ring-blue-400"
+                                            : isDone
+                                            ? "bg-emerald-950/50 border border-emerald-800/60 text-emerald-400 hover:bg-emerald-900/40"
+                                            : "bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-800"
                                         }`}
-                                      />
+                                        title={`Jump to Card ${idx + 1}`}
+                                      >
+                                        <span>Card {idx + 1}</span>
+                                        {isDone && <Check className="w-3 h-3 text-emerald-400 shrink-0" />}
+                                      </button>
                                     );
                                   })}
                                 </div>
-                                <span className="text-[10px] text-slate-500 flex items-center gap-1 font-mono">
+                                <span className="text-[10px] text-slate-500 flex items-center gap-1 font-mono shrink-0 ml-2">
                                   <Clock className="w-3.5 h-3.5 text-slate-600" />
-                                  ~{Math.max(1, Math.ceil((reflectionCards.length - currentCardIdx) * 0.4))} min remaining
+                                  ~{Math.max(1, Math.ceil((reflectionCards.length - currentCardIdx) * 0.4))} min
                                 </span>
                               </div>
 
                               {/* Question Body Text */}
                               <div className="space-y-3">
                                 <span className="inline-block px-2.5 py-0.5 rounded-md bg-blue-950/60 border border-blue-900/40 text-[9px] font-mono text-blue-400 uppercase tracking-widest font-bold">
-                                  {reflectionCards[currentCardIdx].type === 'tf' 
-                                    ? 'Level 1: Concept Recall' 
-                                    : reflectionCards[currentCardIdx].type === 'mc' 
-                                    ? 'Level 2: Active Evaluation' 
-                                    : reflectionCards[currentCardIdx].type === 'fib'
-                                    ? 'Level 3: Dynamic Computation'
-                                    : reflectionCards[currentCardIdx].type === 'match'
-                                    ? 'Level 4: Concept Map Matching'
-                                    : reflectionCards[currentCardIdx].type === 'arrange'
-                                    ? 'Level 4: Step Sequence Analysis'
-                                    : 'Level 5: Qualitative Synthesis'}
+                                  {reflectionCards[currentCardIdx].stageName || 'Foundational Principle'}
                                 </span>
                                 <h3 className="text-sm sm:text-base text-slate-100 font-medium leading-relaxed font-sans">
                                   {reflectionCards[currentCardIdx].question}
@@ -1357,9 +1231,6 @@ export default function StudySessionView({
                                           }`}
                                         >
                                           <span className="text-sm font-bold">{option}</span>
-                                          <span className="text-[9px] font-mono text-slate-500 uppercase">
-                                            {oIdx === 0 ? "Affirmative State" : "Negative State"}
-                                          </span>
                                         </button>
                                       );
                                     })}
@@ -1503,125 +1374,332 @@ export default function StudySessionView({
                             </motion.div>
                           </AnimatePresence>
 
-                          {/* Footer Actions */}
-                          <div className="flex justify-end gap-3 pt-4 border-t border-slate-900/60 mt-4 shrink-0">
+                          {/* Non-Blocking Footer Actions */}
+                          <div className="flex items-center justify-between gap-3 pt-4 border-t border-slate-900/60 mt-4 shrink-0">
                             {!showCardFeedback ? (
-                              <button
-                                type="button"
-                                onClick={handleVerifyCardAnswer}
-                                disabled={
-                                  (reflectionCards[currentCardIdx].type === 'mc' || reflectionCards[currentCardIdx].type === 'tf')
-                                    ? mcAnswer === null 
-                                    : reflectionCards[currentCardIdx].type === 'match'
-                                    ? Object.keys(matchAnswers).length < (reflectionCards[currentCardIdx].leftItems?.length || 0)
-                                    : !textAnswer.trim()
-                                }
-                                className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-slate-900 disabled:text-slate-600 text-white font-mono text-xs uppercase tracking-wider font-bold transition-all shadow-md shadow-blue-500/5 cursor-pointer"
-                              >
-                                Verify Model
-                              </button>
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={handleVerifyCardAnswer}
+                                  disabled={
+                                    (reflectionCards[currentCardIdx].type === 'mc' || reflectionCards[currentCardIdx].type === 'tf')
+                                      ? mcAnswer === null 
+                                      : reflectionCards[currentCardIdx].type === 'match'
+                                      ? Object.keys(matchAnswers).length < (reflectionCards[currentCardIdx].leftItems?.length || 0)
+                                      : !textAnswer.trim()
+                                  }
+                                  className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-35 text-white font-mono text-xs uppercase tracking-wider font-bold transition-all shadow-md shadow-blue-500/10 cursor-pointer"
+                                >
+                                  Verify Answer
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={handleNextCard}
+                                  disabled={submittingReflection}
+                                  className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-mono text-xs uppercase tracking-wider font-bold transition-all flex items-center gap-1.5 cursor-pointer ml-auto"
+                                >
+                                  {submittingReflection ? (
+                                    <div className="flex items-center gap-2">
+                                      <RadialPulseLoader size={16} color="#ffffff" showText={false} />
+                                      <span>Saving...</span>
+                                    </div>
+                                  ) : currentCardIdx < reflectionCards.length - 1 ? (
+                                    <>
+                                      Next Question <ArrowRight className="w-3.5 h-3.5 text-blue-400" />
+                                    </>
+                                  ) : (
+                                    <>
+                                      Complete Gateway <Check className="w-3.5 h-3.5 text-emerald-400" />
+                                    </>
+                                  )}
+                                </button>
+                              </>
                             ) : (
-                              <button
-                                type="button"
-                                onClick={handleNextCard}
-                                disabled={submittingReflection}
-                                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-mono text-xs uppercase tracking-wider font-bold transition-all flex items-center gap-1.5 shadow-md cursor-pointer"
-                              >
-                                {submittingReflection ? (
-                                  <div className="flex items-center gap-2">
-                                    <RadialPulseLoader size={16} color="#ffffff" showText={false} />
-                                    <span>Saving to database...</span>
-                                  </div>
-                                ) : currentCardIdx < reflectionCards.length - 1 ? (
-                                  <>
-                                    Next Question <ArrowRight className="w-3.5 h-3.5" />
-                                  </>
-                                ) : (
-                                  <>
-                                    Complete Gateway <Check className="w-3.5 h-3.5" />
-                                  </>
-                                )}
-                              </button>
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={handleRetryCard}
+                                  className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 font-mono text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer"
+                                >
+                                  <RefreshCw className="w-3.5 h-3.5 text-blue-400" />
+                                  <span>Try Again</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={handleNextCard}
+                                  disabled={submittingReflection}
+                                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-mono text-xs uppercase tracking-wider font-bold transition-all flex items-center gap-1.5 shadow-md cursor-pointer ml-auto"
+                                >
+                                  {submittingReflection ? (
+                                    <div className="flex items-center gap-2">
+                                      <RadialPulseLoader size={16} color="#ffffff" showText={false} />
+                                      <span>Saving...</span>
+                                    </div>
+                                  ) : currentCardIdx < reflectionCards.length - 1 ? (
+                                    <>
+                                      Next Question <ArrowRight className="w-3.5 h-3.5" />
+                                    </>
+                                  ) : (
+                                    <>
+                                      Complete Gateway <Check className="w-3.5 h-3.5" />
+                                    </>
+                                  )}
+                                </button>
+                              </>
                             )}
                           </div>
                         </div>
-                      ) : (
-                        /* SUCCESS COMPLETION PANEL */
+                      ) : !isReviewingQuestions ? (
+                        /* SUCCESS COMPLETION SUMMARY SCORE CARD */
                         <motion.div 
                           initial={{ opacity: 0, scale: 0.95 }}
                           animate={{ opacity: 1, scale: 1 }}
                           className="space-y-6 text-center py-4 relative z-10"
                         >
                           <div className="relative w-14 h-14 mx-auto">
-                            <div className="absolute inset-0 bg-emerald-500/15 rounded-full blur-xl animate-pulse" />
-                            <div className="w-14 h-14 rounded-full bg-emerald-950/50 border border-emerald-500/30 flex items-center justify-center">
+                            <div className="absolute inset-0 bg-emerald-500/20 rounded-full blur-xl animate-pulse" />
+                            <div className="w-14 h-14 rounded-full bg-emerald-950/60 border border-emerald-500/40 flex items-center justify-center shadow-[0_0_20px_rgba(16,185,129,0.3)]">
                               <CheckCircle2 className="w-7 h-7 text-emerald-400" />
                             </div>
                           </div>
 
                           <div className="space-y-2">
-                            <h2 className="text-xl font-serif italic text-white font-semibold">Reflection Complete</h2>
-                            <p className="text-xs text-slate-400 leading-relaxed max-w-sm mx-auto">
-                              You answered <strong className="text-emerald-400">{correctCount} / {reflectionCards.length}</strong> correctly. Your cognitive metrics have been updated.
-                            </p>
+                            <span className="text-[10px] font-mono uppercase tracking-widest text-emerald-400 font-bold bg-emerald-950/60 px-3 py-1 rounded-full border border-emerald-800/50 inline-block">
+                              Flashcard Gateway Complete
+                            </span>
+                            <h2 className="text-xl font-serif italic text-white font-semibold">General Score Evaluation</h2>
+                            <div className="flex items-center justify-center gap-2 pt-1">
+                              <span className="text-3xl font-mono font-extrabold text-white">{correctCount}</span>
+                              <span className="text-lg font-mono text-slate-500">/ {reflectionCards.length}</span>
+                              <span className="ml-2 px-2.5 py-0.5 rounded-lg text-xs font-mono font-bold bg-blue-900/50 text-blue-300 border border-blue-700/50">
+                                {Math.round((correctCount / (reflectionCards.length || 1)) * 100)}% Accuracy
+                              </span>
+                            </div>
                           </div>
 
                           {/* Evaluation Statistics Grid */}
-                          <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-900 space-y-3.5 text-xs text-left max-w-md mx-auto">
-                            <div className="flex items-center gap-2 text-[9px] font-mono text-slate-500 uppercase tracking-wider font-bold">
-                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                              <span>COGNITIVE PERFORMANCE SYNAPSE</span>
+                          <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-900 space-y-3 text-xs text-left max-w-md mx-auto">
+                            <div className="flex items-center justify-between text-[9px] font-mono text-slate-500 uppercase tracking-wider font-bold">
+                              <div className="flex items-center gap-1.5">
+                                <Cpu className="w-3.5 h-3.5 text-blue-400" />
+                                <span>COGNITIVE PERFORMANCE SYNAPSE</span>
+                              </div>
+                              <span className="text-emerald-400">STATUS: VERIFIED</span>
                             </div>
-                            <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                            <div className="grid grid-cols-2 gap-x-4 gap-y-3 border-t border-slate-900 pt-3">
                               <div className="space-y-0.5">
-                                <span className="text-[9px] text-slate-500 block uppercase">Correct Answers</span>
-                                <span className="text-emerald-400 font-mono text-[11px] font-bold">{correctCount} / {reflectionCards.length}</span>
+                                <span className="text-[9px] text-slate-500 block uppercase">Correct Questions</span>
+                                <span className="text-emerald-400 font-mono text-xs font-bold">{correctCount} / {reflectionCards.length}</span>
                               </div>
                               <div className="space-y-0.5">
-                                <span className="text-[9px] text-slate-500 block uppercase">Mastery Score</span>
-                                <span className="text-slate-200 font-mono text-[11px] font-bold">
-                                  {Math.round((correctCount / reflectionCards.length) * 100)}%
+                                <span className="text-[9px] text-slate-500 block uppercase">Mastery Index</span>
+                                <span className="text-slate-200 font-mono text-xs font-bold">
+                                  {Math.round((correctCount / (reflectionCards.length || 1)) * 100)}%
                                 </span>
                               </div>
                               <div className="space-y-0.5">
                                 <span className="text-[9px] text-slate-500 block uppercase">Topic Confidence</span>
                                 <span className="text-blue-400 font-mono text-[10px] font-bold">
-                                  {correctCount >= 4 ? "HIGH" : correctCount >= 2 ? "MEDIUM" : "DEVELOPING"}
+                                  {correctCount >= (reflectionCards.length * 0.75) ? "HIGH MASTERY" : correctCount >= (reflectionCards.length * 0.5) ? "MODERATE" : "DEVELOPING"}
                                 </span>
                               </div>
                               <div className="space-y-0.5">
-                                <span className="text-[9px] text-slate-500 block uppercase">Topic Understanding</span>
+                                <span className="text-[9px] text-slate-500 block uppercase">Examiner Preparedness</span>
                                 <span className="text-indigo-400 font-mono text-[10px] font-bold">
-                                  {correctCount >= 4 ? "STRONG" : "PROGRESSING"}
+                                  {correctCount >= (reflectionCards.length * 0.75) ? "READY FOR EXAM" : "CONCEPT REVIEW REQD"}
                                 </span>
                               </div>
                             </div>
                           </div>
 
                           {/* CTA Action buttons */}
-                          <div className="flex flex-col sm:flex-row gap-3 pt-4 justify-center max-w-md mx-auto">
+                          <div className="flex flex-col gap-2.5 pt-2 max-w-md mx-auto">
                             <button
                               type="button"
-                              onClick={() => setReflectionActive(false)}
-                              className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-mono text-xs uppercase tracking-wider font-bold rounded-xl shadow-lg shadow-blue-500/10 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                              onClick={() => setIsReviewingQuestions(true)}
+                              className="w-full py-2.5 px-4 bg-slate-900/90 hover:bg-slate-800 text-blue-300 font-mono text-xs uppercase tracking-wider font-bold rounded-xl border border-blue-900/40 hover:border-blue-700/60 transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm"
                             >
-                              Continue Learning
+                              <Eye className="w-4 h-4 text-blue-400" />
+                              <span>Review & Compare Questions ({reflectionCards.length})</span>
                             </button>
+
+                            <div className="flex flex-col sm:flex-row gap-2.5">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setIsSlidingLeftForTeacherLens(true);
+                                  setTimeout(() => setShowTeacherLens(true), 300);
+                                }}
+                                className="flex-1 py-3 bg-gradient-to-r from-[#371BF2] via-[#705FD9] to-[#9C8BD9] hover:opacity-95 text-white font-mono text-xs uppercase tracking-wider font-bold rounded-xl shadow-lg shadow-[#371BF2]/25 flex items-center justify-center gap-2 transition-all cursor-pointer"
+                              >
+                                <GraduationCap className="w-4 h-4 text-white" />
+                                <span>Proceed to Teacher Lens™</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setReflectionActive(false);
+                                  setFlowState('idle');
+                                }}
+                                className="py-3 px-4 bg-slate-900/60 hover:bg-slate-800 text-slate-400 hover:text-slate-200 font-mono text-xs uppercase tracking-wider font-semibold rounded-xl border border-slate-800 transition-all cursor-pointer"
+                              >
+                                Return to Workspace
+                              </button>
+                            </div>
+                          </div>
+                        </motion.div>
+                      ) : (
+                        /* QUESTION COMPARISON & REVIEW PANEL */
+                        <motion.div
+                          initial={{ opacity: 0, y: 15 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="space-y-4 py-2 relative z-10 text-left"
+                        >
+                          {/* Review Panel Header */}
+                          <div className="flex items-center justify-between border-b border-slate-900 pb-3">
+                            <div>
+                              <div className="flex items-center gap-1.5 text-[10px] font-mono text-blue-400 uppercase tracking-wider font-bold">
+                                <BookOpen className="w-3.5 h-3.5" />
+                                <span>Gateway Review & Comparison Mode</span>
+                              </div>
+                              <h3 className="text-base font-serif italic text-white font-semibold">
+                                Review Submitted Flashcard Questions
+                              </h3>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setIsReviewingQuestions(false)}
+                              className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs font-mono rounded-lg border border-slate-800 flex items-center gap-1 transition-colors cursor-pointer"
+                            >
+                              <ArrowLeft className="w-3.5 h-3.5" />
+                              <span>Back to Score</span>
+                            </button>
+                          </div>
+
+                          {/* List of Questions with Student Answer vs Model Answer */}
+                          <div className="max-h-[360px] overflow-y-auto space-y-3 pr-1.5 custom-scrollbar">
+                            {reflectionCards.map((card, idx) => {
+                              const studentAns = reflectionAnswers[idx] || "Skipped / No Answer Provided";
+                              
+                              let modelAns = "";
+                              if (card.type === 'mc' || card.type === 'tf') {
+                                modelAns = (card.options && card.correctIdx !== undefined && card.options[card.correctIdx])
+                                  ? card.options[card.correctIdx]
+                                  : "Model option response";
+                              } else if (card.type === 'match' && card.correctPairs) {
+                                modelAns = Object.entries(card.correctPairs).map(([k, v]) => `${k} -> ${v}`).join(", ");
+                              } else if (card.type === 'arrange' && card.steps) {
+                                modelAns = card.steps.join(" -> ");
+                              } else if (card.correctKeyword) {
+                                modelAns = `Key term / concept: "${card.correctKeyword}"`;
+                              } else {
+                                modelAns = card.explanationWhy || "Model analytical explanation";
+                              }
+
+                              return (
+                                <div key={idx} className="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-900 space-y-2.5 text-xs">
+                                  <div className="flex items-center justify-between gap-2 border-b border-slate-900/80 pb-2">
+                                    <span className="text-[10px] font-mono text-blue-400 uppercase font-bold">
+                                      Card {idx + 1} • {card.type.toUpperCase()}
+                                    </span>
+                                    <span className="text-[10px] font-mono text-slate-500">
+                                      Topic: {card.stageName || "Conceptual"}
+                                    </span>
+                                  </div>
+
+                                  <p className="text-slate-200 font-serif italic text-xs leading-relaxed">
+                                    "{card.question}"
+                                  </p>
+
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] pt-1">
+                                    {/* Student Answer */}
+                                    <div className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800/80 space-y-1">
+                                      <span className="text-[9px] font-mono text-slate-400 uppercase font-bold block">
+                                        Your Answer:
+                                      </span>
+                                      <p className="text-slate-200 font-mono text-xs break-words">
+                                        {studentAns}
+                                      </p>
+                                    </div>
+
+                                    {/* Model Answer */}
+                                    <div className="p-2.5 rounded-xl bg-blue-950/30 border border-blue-900/40 space-y-1">
+                                      <span className="text-[9px] font-mono text-blue-400 uppercase font-bold block">
+                                        Model Answer:
+                                      </span>
+                                      <p className="text-blue-200 font-mono text-xs break-words">
+                                        {modelAns}
+                                      </p>
+                                    </div>
+                                  </div>
+
+                                  {/* Explanation / Feedback */}
+                                  {(card.feedbackCorrect || card.explanationWhy) && (
+                                    <div className="text-[10px] font-mono text-slate-400 bg-slate-900/40 p-2 rounded-lg border border-slate-900">
+                                      <span className="text-slate-500 font-bold uppercase block mb-0.5">Mentor Insight:</span>
+                                      <p>{card.feedbackCorrect || card.explanationWhy}</p>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+
+                          {/* Bottom Action Footer for Review Mode */}
+                          <div className="flex flex-col sm:flex-row gap-2.5 pt-2">
+                            <button
+                              type="button"
+                              onClick={() => setIsReviewingQuestions(false)}
+                              className="py-2.5 px-4 bg-slate-900 hover:bg-slate-800 text-slate-300 font-mono text-xs uppercase tracking-wider font-semibold rounded-xl border border-slate-800 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                            >
+                              <ArrowLeft className="w-3.5 h-3.5" />
+                              <span>Back to Score Summary</span>
+                            </button>
+
                             <button
                               type="button"
                               onClick={() => {
-                                setReflectionActive(false);
-                                setFlowState('idle'); // Returns to the chat feed workspace
+                                setIsSlidingLeftForTeacherLens(true);
+                                setTimeout(() => setShowTeacherLens(true), 300);
                               }}
-                              className="flex-1 py-3 bg-slate-900 hover:bg-slate-800 text-slate-300 font-mono text-xs uppercase tracking-wider font-bold rounded-xl border border-slate-800 transition-all cursor-pointer"
+                              className="flex-1 py-2.5 px-4 bg-gradient-to-r from-[#371BF2] via-[#705FD9] to-[#9C8BD9] hover:opacity-95 text-white font-mono text-xs uppercase tracking-wider font-bold rounded-xl shadow-lg shadow-[#371BF2]/25 flex items-center justify-center gap-2 transition-all cursor-pointer"
                             >
-                              Return to AI Workspace
+                              <GraduationCap className="w-4 h-4 text-white" />
+                              <span>Proceed to Teacher Lens™</span>
                             </button>
                           </div>
                         </motion.div>
                       )}
                     </motion.div>
                   </div>
+                )}
+              </AnimatePresence>
+
+              {/* Stage 9: Teacher Lens Overlay */}
+              <AnimatePresence>
+                {showTeacherLens && activeSession && (
+                  <TeacherLensOverlay
+                    topicName={activeSession.focus || "Guided AI Study Session"}
+                    user={user}
+                    session={activeSession}
+                    performanceScore={{
+                      correctCount,
+                      totalCount: reflectionCards.length
+                    }}
+                    lessonText={activeSession.messages.slice().reverse().find(m => m.sender === 'mentor')?.text || ""}
+                    onCloseSession={() => {
+                      setShowTeacherLens(false);
+                      setReflectionActive(false);
+                      setIsSlidingLeftForTeacherLens(false);
+                      if (onRefreshUser) onRefreshUser();
+                      onRefreshSessions();
+                    }}
+                    onHighlightNexusTopic={(topic) => {
+                      console.log("Teacher Lens selected Nexus topic:", topic);
+                    }}
+                  />
                 )}
               </AnimatePresence>
             </div>
@@ -1633,7 +1711,7 @@ export default function StudySessionView({
                   <EpselonLogo size={22} className="filter drop-shadow-[0_0_4px_rgba(224,27,242,0.2)]" />
                   <div>
                     <h3 className="text-xs font-semibold text-slate-200">
-                      {activeSession ? activeSession.title : "AI Study Workspace"}
+                      {activeSession ? activeSession.title : "Epselon Workspace"}
                     </h3>
                     {activeSession ? (
                       <div className="flex items-center gap-2 mt-0.5">
@@ -1644,7 +1722,7 @@ export default function StudySessionView({
                       </div>
                     ) : (
                       <span className="text-[10px] text-slate-500 font-mono">
-                        Socratic Prompt Coach Active
+                        AI Prompt Coach Active
                       </span>
                     )}
                   </div>
@@ -1671,66 +1749,6 @@ export default function StudySessionView({
                       <Sparkles className="w-3 h-3 text-blue-400 animate-pulse" />
                       <span>New Chat</span>
                     </motion.button>
-                  )}
-
-                  {/* "Sessions History" Dropdown */}
-                  {sessions.length > 0 && (
-                    <div className="relative">
-                      <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        type="button"
-                        onClick={() => setShowHistoryDropdown(!showHistoryDropdown)}
-                        className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800/90 border border-slate-800 text-[10px] font-mono uppercase tracking-wider font-bold text-slate-300 rounded-lg flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
-                        title="View past study sessions"
-                      >
-                        <Folder className="w-3 h-3 text-slate-400" />
-                        <span>Recent Chats ({sessions.length})</span>
-                        <ChevronDown className="w-3 h-3 text-slate-500" />
-                      </motion.button>
-
-                      {showHistoryDropdown && (
-                        <>
-                          {/* Click overlay to close dropdown */}
-                          <div 
-                            className="fixed inset-0 z-40" 
-                            onClick={() => setShowHistoryDropdown(false)} 
-                          />
-                          
-                          {/* Sessions List Dropdown Menu */}
-                          <div className="absolute right-0 mt-2 z-50 bg-slate-900/95 backdrop-blur-md border border-slate-800 rounded-xl py-2 shadow-2xl w-64 max-h-80 overflow-y-auto flex flex-col gap-0.5 text-xs animate-scale-in">
-                            <div className="px-3 py-1 text-[10px] font-mono text-slate-500 uppercase tracking-wider border-b border-slate-800/60 pb-1.5 mb-1 flex items-center justify-between">
-                              <span>Socratic History</span>
-                              <span className="text-[9px] text-slate-600 font-mono lowercase">({sessions.length} paths)</span>
-                            </div>
-                            {sessions.map((s) => {
-                              const isActive = s.id === activeSessionId;
-                              return (
-                                <button
-                                  key={s.id}
-                                  type="button"
-                                  onClick={() => {
-                                    onSelectSession(s.id);
-                                    setShowHistoryDropdown(false);
-                                  }}
-                                  className={`px-3 py-2 text-left hover:bg-slate-800/60 flex flex-col gap-0.5 transition-colors group ${
-                                    isActive ? "bg-blue-600/10 border-l-2 border-blue-500" : "border-l-2 border-transparent"
-                                  }`}
-                                >
-                                  <span className={`font-medium truncate ${isActive ? "text-blue-400 font-bold" : "text-slate-200 group-hover:text-white"}`}>
-                                    {s.title}
-                                  </span>
-                                  <span className="text-[9px] text-slate-500 flex items-center gap-1 font-mono">
-                                    <Clock className="w-2.5 h-2.5" />
-                                    {s.difficulty || "Intermediate"} • {s.messages.length} msg
-                                  </span>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </>
-                      )}
-                    </div>
                   )}
                 </div>
               </div>
@@ -1793,10 +1811,10 @@ export default function StudySessionView({
                 </div>
                 <div className="space-y-1">
                   <p className="font-semibold text-amber-200">
-                    Offline Socratic Mode Enabled
+                    Offline Study Mode Enabled
                   </p>
                   <p className="text-[11px] text-slate-400 leading-relaxed font-light">
-                    The daily cloud API quota has been reached. Epselon has automatically switched to high-speed Offline Socratic Mode. Your custom physical derivations, regional analogies, and active recall moments remain fully functional and active!
+                    The daily cloud API quota has been reached. Epselon has automatically switched to high-speed Offline Study Mode. Your custom derivations, regional analogies, and active recall moments remain fully functional!
                   </p>
                 </div>
               </motion.div>
@@ -1827,19 +1845,12 @@ export default function StudySessionView({
                     {isMentor && msg.id !== "msg_init" && !msg.text.startsWith("### 🛂") && (msg.protocolTrace?.learningIntent?.intent === "Study" || msg.protocolTrace?.intent?.category === "Study") ? (
                       <TransformedLessonView message={msg} topicName={activeSession?.focus || "General Science"} />
                     ) : (
-                      <p className="font-sans font-light whitespace-pre-wrap">{msg.text}</p>
+                      <FormattedMarkdown>{msg.text}</FormattedMarkdown>
                     )}
                     
                     {/* Inline Formula Drawer */}
                     {(!isMentor || msg.id === "msg_init" || msg.text.startsWith("### 🛂")) && msg.equation && (
-                      <div className="mt-3.5 p-3.5 rounded-lg bg-slate-950/90 border border-slate-800 font-mono text-[11px] text-brand-light flex flex-col gap-1 select-all">
-                        <span className="text-[8px] text-slate-500 uppercase tracking-widest block mb-1">
-                          Core Equation Derivation
-                        </span>
-                        <div className="text-center py-2 text-sm text-slate-200">
-                          {msg.equation}
-                        </div>
-                      </div>
+                      <MathFormula latex={msg.equation} label="Core Derivation" />
                     )}
 
                     {/* Protocol Trace Toggle Button */}
@@ -2192,7 +2203,7 @@ export default function StudySessionView({
               </div>
               <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 text-xs text-slate-400 flex items-center gap-3">
                 <RadialPulseLoader size={36} color="#371BF2" showText={false} />
-                <span>Educational Intelligence is formulating Socratic query...</span>
+                <span>AI Tutor is preparing your response...</span>
               </div>
             </div>
           )}
@@ -2210,47 +2221,87 @@ export default function StudySessionView({
         {/* Input area */}
         <div className="w-full max-w-2xl mx-auto flex flex-col items-center justify-center px-4 pb-6 pt-2 z-40 relative">
           
-          {/* STATE 5: Floating Educational Card Overlay */}
+          {/* STATE 5: Educational Context Engine Summary Card Overlay */}
           <AnimatePresence>
             {flowState === 'show_card' && (
-              <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
+              <div className="fixed inset-0 bg-slate-950/75 backdrop-blur-md z-50 flex items-center justify-center p-4">
                 <motion.div
-                  initial={{ opacity: 0, scale: 0.95, y: 25 }}
+                  initial={{ opacity: 0, scale: 0.95, y: 20 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95, y: -25 }}
+                  exit={{ opacity: 0, scale: 0.95, y: -20 }}
                   transition={{ type: "spring", duration: 0.5 }}
-                  className="relative max-w-md w-full bg-[#0d111d] border border-brand-primary/30 rounded-2xl p-6 shadow-2xl text-center space-y-6 overflow-hidden"
+                  className="relative max-w-lg w-full bg-slate-900 border border-indigo-500/30 rounded-2xl p-6 shadow-2xl text-left space-y-5 overflow-hidden"
                 >
-                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-[2px] bg-gradient-to-r from-transparent via-brand-primary to-transparent" />
-                  <div className="absolute -top-12 -left-12 w-32 h-32 rounded-full bg-brand-primary/5 blur-2xl pointer-events-none" />
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-[2px] bg-gradient-to-r from-transparent via-indigo-500 to-transparent" />
                   
-                  <div className="w-12 h-12 rounded-full bg-brand-primary/10 flex items-center justify-center mx-auto text-brand-light">
-                    <Sparkles className="w-6 h-6 animate-pulse" />
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 shrink-0">
+                      <Sparkles className="w-5 h-5 animate-pulse" />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-serif italic text-white font-semibold flex items-center gap-2">
+                        ✨ Optimized for Learning
+                      </h3>
+                      <p className="text-xs text-slate-400 font-light leading-relaxed">
+                        We prepared your request by assembling structured educational context around your query.
+                      </p>
+                    </div>
                   </div>
-                  
-                  <div className="space-y-2">
-                    <h3 className="text-lg font-serif italic text-white font-semibold">✨ Prompt Enhanced</h3>
-                    <p className="text-xs text-slate-300 leading-relaxed font-light">
-                      Epselon has strengthened your prompt to produce a better, deeper learning experience.
-                    </p>
-                    <p className="text-xs text-slate-400 leading-relaxed font-light">
-                      Take a few seconds to review what changed. Understanding better prompts will help you become a stronger learner over time.
-                    </p>
+
+                  {/* Checklist of context additions */}
+                  <div className="space-y-2 p-3.5 rounded-xl bg-slate-950/60 border border-slate-800">
+                    <span className="text-[10px] font-mono text-slate-500 uppercase tracking-wider block mb-1">
+                      Context Packet Summary:
+                    </span>
+                    {[
+                      { title: "Learning context", detail: activeEcePacket ? `Mapped to ${activeEcePacket.analysis.subject}` : "Subject & discipline context attached" },
+                      { title: "Teaching objectives", detail: "Pedagogical targets and goals defined" },
+                      { title: "Response structure", detail: "Structured 6-part pedagogical response sequence" },
+                      { title: "Better instructional guidance", detail: "Tailored pedagogical rules & level matching" },
+                      { title: "Study-friendly formatting", detail: "LaTeX KaTeX equations and Markdown enabled" },
+                    ].map((item, idx) => (
+                      <div key={idx} className="flex items-start gap-2 text-xs">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                        <div>
+                          <span className="font-semibold text-slate-200">{item.title}</span>
+                          <span className="text-[11px] text-slate-400 block font-light">{item.detail}</span>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  
-                  <button
-                    type="button"
-                    onClick={() => setFlowState('reviewed')}
-                    className="w-full py-2.5 rounded-xl bg-brand-primary hover:bg-brand-medium text-xs font-mono font-bold uppercase tracking-wider text-white transition-all shadow-md shadow-brand-primary/20 cursor-pointer"
-                  >
-                    Review Prompt
-                  </button>
+
+                  {/* Verbatim prompt notification */}
+                  <div className="px-3 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-mono text-emerald-300 flex items-center gap-2">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                    <span>Original prompt preserved 100% verbatim. Zero words altered.</span>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="grid grid-cols-2 gap-3 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setIsDetailsModalOpen(true)}
+                      className="py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-mono font-semibold uppercase tracking-wider text-slate-200 transition-all border border-slate-700 cursor-pointer flex items-center justify-center gap-1.5"
+                    >
+                      <Eye className="w-3.5 h-3.5 text-indigo-400" />
+                      View Details
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setFlowState('reviewed')}
+                      className="py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-mono font-bold uppercase tracking-wider text-white transition-all shadow-md shadow-indigo-600/20 cursor-pointer flex items-center justify-center gap-1.5"
+                    >
+                      <span>Continue</span>
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
                 </motion.div>
               </div>
             )}
           </AnimatePresence>
 
-          {/* STATE 3 & 4: Prompt Enhancing Animation & Lightweight Educational Pipeline */}
+          {/* STATE 3 & 4: Educational Context Engine Assembly Animation */}
           {flowState === 'enhancing' ? (
             <div className="w-full max-w-xl bg-bg-card border border-border-subtle rounded-2xl p-5 shadow-2xl space-y-4 font-sans relative overflow-hidden pointer-events-auto prompt-coach-gradient-border">
               {/* Ambient Background Shimmers */}
@@ -2261,38 +2312,38 @@ export default function StudySessionView({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="w-5 h-5 rounded bg-gradient-to-tr from-brand-dark to-brand-primary flex items-center justify-center relative">
-                    <Sparkles className="w-3.5 h-3.5 text-white" />
+                    <Brain className="w-3.5 h-3.5 text-white" />
                   </div>
                   <span className="text-[10px] font-mono font-bold tracking-widest text-slate-300 uppercase">
-                    PROMPT COACH ACTIVE
+                    EDUCATIONAL CONTEXT ENGINE
                   </span>
                 </div>
-                <div className="flex items-center gap-1.5 text-[10px] text-pink-400 font-mono font-medium">
+                <div className="flex items-center gap-1.5 text-[10px] text-indigo-400 font-mono font-medium">
                   <RefreshCw className="w-3 h-3 animate-spin" />
-                  SCAFFOLDING PEDAGOGY...
+                  ASSEMBLING CONTEXT...
                 </div>
               </div>
 
-              {/* Evolving Textbox with glowing border and shimmer */}
+              {/* Textbox with glowing border and virtual cursor */}
               <div className="space-y-1">
-                <span className="text-[8px] font-mono text-slate-500 uppercase tracking-widest block">Original input: "{coachOriginal}"</span>
-                <div className="p-4 rounded-xl bg-slate-950 border border-brand-primary/30 text-xs text-slate-200 leading-relaxed font-sans shadow-lg shadow-brand-primary/5 relative min-h-[100px] select-none">
+                <span className="text-[8px] font-mono text-slate-500 uppercase tracking-widest block">Original Student Request: "{coachOriginal}"</span>
+                <div className="p-4 rounded-xl bg-slate-950 border border-brand-primary/30 text-xs text-slate-200 leading-relaxed font-sans shadow-lg shadow-brand-primary/5 relative min-h-[90px] select-none">
                   <p className="inline whitespace-pre-wrap">{inputText}</p>
-                  <span className="w-1.5 h-3.5 bg-brand-light inline-block ml-0.5 animate-pulse" />
+                  <span className="w-1.5 h-3.5 bg-indigo-400 inline-block ml-0.5 animate-pulse" />
                 </div>
               </div>
 
-              {/* STATE 4: Educational Pipeline Steps */}
+              {/* Educational Pipeline Context Indicators */}
               <div className="space-y-2 pt-1 border-t border-slate-800/80">
-                <span className="text-[8px] font-mono text-slate-500 uppercase tracking-widest block mb-1">Pedagogical Pipeline:</span>
+                <span className="text-[8px] font-mono text-slate-500 uppercase tracking-widest block mb-1">Context Indicators:</span>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                   {[
-                    "Understanding intent",
-                    "Detecting subject",
-                    "Loading learning profile",
-                    "Applying learning strategy",
-                    "Improving prompt",
-                    "Ready"
+                    "Adding Learning Context",
+                    "Detecting Subject",
+                    "Building Study Structure",
+                    "Selecting Teaching Strategy",
+                    "Preparing AI Instructions",
+                    "Optimizing for Learning"
                   ].map((step, idx) => {
                     const isCompleted = pipelineStep > idx || (idx === 5 && pipelineStep === 5);
                     const isActive = pipelineStep === idx && idx < 5;
@@ -2301,12 +2352,12 @@ export default function StudySessionView({
                         {isCompleted ? (
                           <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
                         ) : isActive ? (
-                          <Sparkles className="w-4 h-4 text-pink-400 animate-spin shrink-0" />
+                          <Sparkles className="w-4 h-4 text-indigo-400 animate-spin shrink-0" />
                         ) : (
                           <Circle className="w-4 h-4 text-slate-700 shrink-0" />
                         )}
                         <span className={`text-[11px] font-light tracking-wide ${
-                          isCompleted ? "text-slate-200 font-medium" : isActive ? "text-pink-300 font-semibold animate-pulse" : "text-slate-600"
+                          isCompleted ? "text-slate-200 font-medium" : isActive ? "text-indigo-300 font-semibold animate-pulse" : "text-slate-600"
                         }`}>
                           {step}
                         </span>
@@ -2320,27 +2371,36 @@ export default function StudySessionView({
             /* STATE 1, 2, 6, 7 Form Interface */
             <form onSubmit={handleSendMessage} className="w-full max-w-xl pointer-events-auto relative transition-all duration-300">
               
-              {/* Educational Enhanced ribbon at the top of input if reviewed (STATE 6/7) */}
+              {/* Educational Enhanced ribbon at the top of input if reviewed */}
               {flowState === 'reviewed' && (
                 <motion.div 
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="mb-2.5 px-3 py-1.5 bg-brand-primary/10 border border-brand-primary/20 rounded-xl text-[10px] font-mono text-brand-light flex items-center justify-between shadow-md"
+                  className="mb-2.5 px-3 py-2 bg-indigo-950/60 border border-indigo-500/30 rounded-xl text-[10px] font-mono text-indigo-300 flex items-center justify-between shadow-md"
                 >
-                  <div className="flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-brand-light animate-pulse" />
-                    <span>PROMPT COACH ENHANCED: Scaffolding complete. Ready to send. (Editable)</span>
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-3.5 h-3.5 text-indigo-400 animate-pulse shrink-0" />
+                    <span>CONTEXT PACKET ATTACHED: Ready for AI • 100% Student Prompt Preserved</span>
                   </div>
-                  <button 
-                    type="button" 
-                    onClick={() => {
-                      setFlowState('idle');
-                      setInputText(coachOriginal);
-                    }}
-                    className="text-slate-500 hover:text-white underline transition-colors uppercase tracking-wider text-[9px] font-bold cursor-pointer"
-                  >
-                    Reset Original
-                  </button>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setIsDetailsModalOpen(true)}
+                      className="text-indigo-400 hover:text-white underline font-bold uppercase tracking-wider text-[9px] cursor-pointer"
+                    >
+                      View Details
+                    </button>
+                    <button 
+                      type="button" 
+                      onClick={() => {
+                        setFlowState('idle');
+                        setInputText(coachOriginal);
+                      }}
+                      className="text-slate-400 hover:text-white underline transition-colors uppercase tracking-wider text-[9px] font-bold cursor-pointer"
+                    >
+                      Reset
+                    </button>
+                  </div>
                 </motion.div>
               )}
 
@@ -2645,7 +2705,7 @@ export default function StudySessionView({
               </div>
 
               {/* Center-aligned Learning Intent Mode pills (Claude AI style) */}
-              <div className="flex flex-wrap items-center justify-center gap-2.5 mt-4 px-2 w-full max-w-xl mx-auto">
+              <div className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2.5 mt-3 px-1 w-full max-w-xl mx-auto">
                 {[
                   { val: "Study", label: "Study Mode", icon: BookOpen, color: "text-indigo-400" },
                   { val: "Casual Conversation", label: "General Chat", icon: MessageSquare, color: "text-pink-400" },
@@ -2671,13 +2731,13 @@ export default function StudySessionView({
                           }
                         }
                       }}
-                      className={`px-3.5 py-1.5 rounded-full text-[11px] font-mono tracking-tight flex items-center gap-1.5 transition-all hover:scale-105 active:scale-95 cursor-pointer border ${
+                      className={`px-2.5 py-1 min-[380px]:px-3.5 min-[380px]:py-1.5 rounded-full text-[10px] min-[380px]:text-[11px] font-mono tracking-tight flex items-center gap-1 sm:gap-1.5 transition-all hover:scale-105 active:scale-95 cursor-pointer border ${
                         isSel 
                           ? "bg-slate-800 text-pink-400 border-slate-600 shadow-md shadow-pink-500/5 font-semibold" 
                           : "bg-slate-900/50 text-slate-400 hover:text-slate-200 border-slate-800/80 hover:border-slate-700"
                       }`}
                     >
-                      <IconComponent className={`w-3.5 h-3.5 ${opt.color}`} />
+                      <IconComponent className={`w-3 h-3 sm:w-3.5 sm:h-3.5 ${opt.color}`} />
                       <span>{opt.label}</span>
                     </button>
                   );
@@ -2933,7 +2993,7 @@ export default function StudySessionView({
               <div className="flex items-center gap-2">
                 <BookOpen className="w-4 h-4 text-blue-400 animate-pulse" />
                 <span className="text-[10px] font-mono tracking-widest uppercase font-bold text-slate-400">
-                  Socratic AI Definition
+                  AI Concept Definition
                 </span>
               </div>
               <button
@@ -2994,6 +3054,13 @@ export default function StudySessionView({
         </div>
       )}
     </AnimatePresence>
+
+    {/* Educational Context Details Modal */}
+    <EducationalContextDetailsModal
+      isOpen={isDetailsModalOpen}
+      onClose={() => setIsDetailsModalOpen(false)}
+      packet={activeEcePacket}
+    />
 
     </div>
   );

@@ -4,11 +4,13 @@ import {
   BookOpen, Sparkles, Award, RotateCcw, CheckCircle2, ChevronRight, 
   Layers, Check, Eye, HelpCircle, ArrowRight, ArrowLeft, Brain,
   Clock, Cpu, Database, Calendar, ExternalLink, RefreshCw, Flame,
-  TrendingUp, FileText, ListOrdered, Share2, BookMarked, Code
+  TrendingUp, FileText, ListOrdered, Share2, BookMarked, Code, FileDown
 } from "lucide-react";
 import { UserProfile, FlashcardCollection, Flashcard, StudySession } from "../../types";
 import { submitCardReview, updateSessionIntent } from "../../lib/api";
 import { CardStack } from "../../../components/ui/card-stack";
+import SessionExportModal from "../../components/SessionExportModal";
+import MathFormula from "../../components/MathFormula";
 
 interface FlashcardLibraryProps {
   user: UserProfile;
@@ -58,8 +60,10 @@ export default function FlashcardLibrary({
   const [isFlipped, setIsFlipped] = useState(false);
   const [reviewsCompleted, setReviewsCompleted] = useState<Flashcard[]>([]);
 
-  // Interactive Knowledge Graph states
+  // Interactive Knowledge Graph & Export Modal states
   const [selectedGraphNode, setSelectedGraphNode] = useState<string | null>(null);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [exportSessionTargetId, setExportSessionTargetId] = useState<string | null>(null);
 
   // --------------------------------------------------
   // KNOWLEDGE EXTRACTION ENGINE (DYNAMIC COMPILATION)
@@ -261,7 +265,7 @@ export default function FlashcardLibrary({
         if (sess.focus && !concepts.some(c => c.name.toLowerCase() === sess.focus.toLowerCase())) {
           concepts.push({
             name: sess.focus,
-            description: `Core study focus regarding ${sess.focus} compiled during socratic study.`,
+            description: `Core study focus regarding ${sess.focus} compiled during study sessions.`,
             mastery: sess.progress || 50
           });
         }
@@ -313,7 +317,7 @@ export default function FlashcardLibrary({
                 timestamp: msg.timestamp || "Active Study session",
                 prompt: preceding.text.substring(0, 100) + (preceding.text.length > 100 ? "..." : ""),
                 studentAnswer: msg.text,
-                feedback: "Socratic dialog synthesis captured by Knowledge Engine."
+                feedback: "Study chat synthesis captured by Knowledge Engine."
               });
             }
           }
@@ -326,7 +330,18 @@ export default function FlashcardLibrary({
         topic.toLowerCase().includes(c.name.toLowerCase())
       );
       const matchedCollIds = matchedColls.map(c => c.id);
-      const domainFlashcards = flashcards.filter(fc => matchedCollIds.includes(fc.collectionId));
+      const rawDomainFlashcards = flashcards.filter(fc => matchedCollIds.includes(fc.collectionId));
+      
+      // Deduplicate flashcards by front question text
+      const domainFlashcards: Flashcard[] = [];
+      const seenFronts = new Set<string>();
+      for (const fc of rawDomainFlashcards) {
+        const normFront = fc.front.trim().toLowerCase();
+        if (!seenFronts.has(normFront)) {
+          seenFronts.add(normFront);
+          domainFlashcards.push(fc);
+        }
+      }
 
       // Calculate dynamic mastery
       let totalProgress = 0;
@@ -478,19 +493,34 @@ export default function FlashcardLibrary({
               </h2>
               <p className="text-xs text-slate-400 mt-1.5 max-w-xl leading-relaxed">
                 Conversations are events; knowledge is permanent. As you study, Epselon digests your
-                Socratic dialogues, mapping concepts, proofs, and equations into these evolving domains.
+                study sessions, mapping concepts, proofs, and equations into these evolving domains.
               </p>
             </div>
 
-            {/* Notion style filter */}
-            <div className="relative w-full md:w-64">
-              <input
-                type="text"
-                placeholder="Search Knowledge Domains..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-slate-900/60 border border-slate-800 text-xs text-slate-200 placeholder-slate-500 rounded-full px-4 py-2 focus:outline-none focus:border-slate-600 focus:ring-1 focus:ring-slate-600 transition-all"
-              />
+            {/* Notion style filter & Export button */}
+            <div className="flex items-center gap-2.5 w-full md:w-auto">
+              <button
+                type="button"
+                onClick={() => {
+                  setExportSessionTargetId(null);
+                  setIsExportModalOpen(true);
+                }}
+                className="px-3.5 py-2 bg-indigo-600/10 hover:bg-indigo-600 border border-indigo-500/30 text-indigo-300 hover:text-white rounded-full text-xs font-mono uppercase tracking-wider font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm shrink-0"
+                title="Export study session as structured PDF document"
+              >
+                <FileDown className="w-3.5 h-3.5 text-indigo-400" />
+                <span>Export PDF</span>
+              </button>
+
+              <div className="relative w-full md:w-64">
+                <input
+                  type="text"
+                  placeholder="Search Knowledge Domains..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full bg-slate-900/60 border border-slate-800 text-xs text-slate-200 placeholder-slate-500 rounded-full px-4 py-2 focus:outline-none focus:border-slate-600 focus:ring-1 focus:ring-slate-600 transition-all"
+                />
+              </div>
             </div>
           </div>
 
@@ -614,8 +644,8 @@ export default function FlashcardLibrary({
 
                   return (
                     <>
-                      {/* Premium 3D Card Stack selector */}
-                      <div className="w-full max-w-2xl px-4 flex justify-center mt-2">
+                      {/* Premium 3D Card Stack selector (Desktop) */}
+                      <div className="w-full max-w-2xl px-4 hidden md:flex justify-center mt-2">
                         <CardStack
                           items={cardStackItems}
                           initialIndex={safeIndex}
@@ -641,7 +671,7 @@ export default function FlashcardLibrary({
                                 <div className="space-y-1.5 relative z-10">
                                   <div className="flex justify-between items-start gap-3">
                                     <span className="px-2 py-0.5 rounded text-[8px] font-mono tracking-wider uppercase text-indigo-400 bg-indigo-500/10 border border-indigo-500/20">
-                                      {s.difficulty || "Socratic"} • {s.bloomLevel || "Recall"}
+                                      {s.difficulty || "Guided"} • {s.bloomLevel || "Recall"}
                                     </span>
                                     <span className="text-[10px] font-mono font-bold text-indigo-400">{s.progress}% Progress</span>
                                   </div>
@@ -683,6 +713,90 @@ export default function FlashcardLibrary({
                         />
                       </div>
 
+                      {/* Traditional Mobile Flashcard Placement */}
+                      <div className="w-full max-w-2xl px-4 md:hidden space-y-3.5 mt-2">
+                        <div className="flex justify-between items-center text-xs font-mono text-slate-400 p-2.5 bg-slate-900/80 border border-slate-800 rounded-xl shadow-md">
+                          <span className="text-[10px] uppercase tracking-wider text-indigo-400 font-bold">
+                            Flashcard {safeIndex + 1} of {cardStackItems.length}
+                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => setActiveCardIndex(prev => Math.max(0, prev - 1))}
+                              disabled={safeIndex === 0}
+                              className="px-3 py-1 bg-slate-800 hover:bg-slate-750 border border-slate-700 rounded text-[10px] text-slate-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                            >
+                              Prev
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setActiveCardIndex(prev => Math.min(cardStackItems.length - 1, prev + 1))}
+                              disabled={safeIndex === cardStackItems.length - 1}
+                              className="px-3 py-1 bg-slate-800 hover:bg-slate-750 border border-slate-700 rounded text-[10px] text-slate-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                            >
+                              Next
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {cardStackItems.map((item, idx) => {
+                            const s = item.session;
+                            const isSelected = idx === safeIndex;
+                            return (
+                              <div
+                                key={item.id}
+                                onClick={() => setActiveCardIndex(idx)}
+                                className={`relative rounded-2xl border p-4 flex flex-col justify-between transition-all duration-200 cursor-pointer ${
+                                  isSelected
+                                    ? "border-indigo-500/90 bg-slate-950 shadow-xl shadow-indigo-500/10 ring-1 ring-indigo-500/40"
+                                    : "border-slate-800/80 bg-[#080a10]/90 hover:border-slate-700"
+                                }`}
+                              >
+                                <div className="space-y-2">
+                                  <div className="flex justify-between items-center gap-2">
+                                    <span className="px-2 py-0.5 rounded text-[8px] font-mono tracking-wider uppercase text-indigo-400 bg-indigo-500/10 border border-indigo-500/20">
+                                      {s.difficulty || "Guided"} • {s.bloomLevel || "Recall"}
+                                    </span>
+                                    <span className="text-[10px] font-mono font-bold text-indigo-400">{s.progress}%</span>
+                                  </div>
+                                  <h3 className="text-sm font-serif italic text-slate-100 font-medium line-clamp-2">
+                                    {item.title}
+                                  </h3>
+                                </div>
+
+                                <div className="grid grid-cols-3 gap-1.5 py-3">
+                                  <div className="p-1.5 bg-slate-900/80 rounded-lg border border-slate-800 text-center">
+                                    <span className="text-[7px] font-mono text-slate-500 uppercase block">Focus</span>
+                                    <strong className="text-[8.5px] text-slate-300 truncate block mt-0.5">{s.focus || "Dialogue"}</strong>
+                                  </div>
+                                  <div className="p-1.5 bg-slate-900/80 rounded-lg border border-slate-800 text-center">
+                                    <span className="text-[7px] font-mono text-slate-500 uppercase block">Landmarks</span>
+                                    <strong className="text-[8.5px] text-slate-300 block mt-0.5">{item.totalExtracted} Concepts</strong>
+                                  </div>
+                                  <div className="p-1.5 bg-slate-900/80 rounded-lg border border-slate-800 text-center">
+                                    <span className="text-[7px] font-mono text-slate-500 uppercase block">Equations</span>
+                                    <strong className="text-[8.5px] text-slate-300 block mt-0.5">{item.totalEquations} Eqs</strong>
+                                  </div>
+                                </div>
+
+                                <div className="space-y-1.5">
+                                  <div className="h-1 w-full bg-slate-900 rounded-full overflow-hidden">
+                                    <div 
+                                      style={{ width: `${s.progress}%` }}
+                                      className="h-full bg-gradient-to-r from-blue-600 to-indigo-500 rounded-full"
+                                    />
+                                  </div>
+                                  <div className="flex justify-between items-center text-[7.5px] font-mono text-slate-500 uppercase tracking-wider pt-0.5">
+                                    <span>{isSelected ? "Active Selected" : "Tap to focus"}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
                       {/* Active Selected Card Details (Smooth Expanded State below stack) */}
                       {activeItem && (() => {
                         const s = activeItem.session;
@@ -699,16 +813,31 @@ export default function FlashcardLibrary({
                                 <h4 className="text-lg font-serif italic text-slate-100 mt-0.5">{activeItem.title}</h4>
                               </div>
                               
-                              {onReopenSession && (
+                              <div className="flex items-center gap-2">
                                 <button
                                   type="button"
-                                  onClick={() => onReopenSession(s.id)}
-                                  className="px-3.5 py-1.5 bg-indigo-600/10 hover:bg-indigo-600 border border-indigo-500/20 hover:border-indigo-400/50 rounded-lg text-[10px] font-mono uppercase tracking-wider font-bold text-indigo-400 hover:text-white transition-all cursor-pointer flex items-center gap-1.5"
+                                  onClick={() => {
+                                    setExportSessionTargetId(s.id);
+                                    setIsExportModalOpen(true);
+                                  }}
+                                  className="px-3 py-1.5 bg-indigo-600/10 hover:bg-indigo-600/30 border border-indigo-500/30 rounded-lg text-[10px] font-mono uppercase tracking-wider font-bold text-indigo-300 hover:text-indigo-100 transition-all cursor-pointer flex items-center gap-1.5"
+                                  title="Export this session as PDF"
                                 >
-                                  Open Conversation
-                                  <ExternalLink className="w-3.5 h-3.5" />
+                                  <FileDown className="w-3.5 h-3.5 text-indigo-400" />
+                                  <span>Export PDF</span>
                                 </button>
-                              )}
+
+                                {onReopenSession && (
+                                  <button
+                                    type="button"
+                                    onClick={() => onReopenSession(s.id)}
+                                    className="px-3.5 py-1.5 bg-indigo-600/10 hover:bg-indigo-600 border border-indigo-500/20 hover:border-indigo-400/50 rounded-lg text-[10px] font-mono uppercase tracking-wider font-bold text-indigo-400 hover:text-white transition-all cursor-pointer flex items-center gap-1.5"
+                                  >
+                                    Open Conversation
+                                    <ExternalLink className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                              </div>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -750,7 +879,7 @@ export default function FlashcardLibrary({
 
                             <div className="space-y-3 pt-2">
                               <span className="text-[9px] font-mono text-slate-400 uppercase tracking-wider block">
-                                💬 Socratic Dialogue Log
+                                💬 Study Chat Log
                               </span>
                               <div className="p-4 bg-slate-950/80 border border-slate-900 rounded-xl space-y-4 text-xs text-slate-300 font-sans leading-relaxed max-h-44 overflow-y-auto no-scrollbar">
                                 {s.messages.length > 0 ? (
@@ -783,7 +912,7 @@ export default function FlashcardLibrary({
                   <BookOpen className="w-8 h-8 text-slate-600 mx-auto stroke-[1.2]" />
                   <h3 className="text-slate-300 font-serif font-semibold">No Lifelong Learning Cards Yet</h3>
                   <p className="text-xs text-slate-500 max-w-xs mx-auto">
-                    Initiate a Socratic study session in the AI Workspace. Nimo will compile your conversations into interactive cards as you learn.
+                    Start a study session in the AI Workspace. Nimo will compile your conversations into interactive cards as you learn.
                   </p>
                 </div>
               )}
@@ -808,8 +937,8 @@ export default function FlashcardLibrary({
 
                   return (
                     <>
-                      {/* Premium 3D Card Stack selector */}
-                      <div className="w-full max-w-2xl px-4 flex justify-center mt-2">
+                      {/* Premium 3D Card Stack selector (Desktop) */}
+                      <div className="w-full max-w-2xl px-4 hidden md:flex justify-center mt-2">
                         <CardStack
                           items={vaultCardItems}
                           initialIndex={safeIndex}
@@ -887,6 +1016,101 @@ export default function FlashcardLibrary({
                         />
                       </div>
 
+                      {/* Traditional Mobile Subject Vault Placement */}
+                      <div className="w-full max-w-2xl px-4 md:hidden space-y-3.5 mt-2">
+                        <div className="flex justify-between items-center text-xs font-mono text-slate-400 p-2.5 bg-slate-900/80 border border-slate-800 rounded-xl shadow-md">
+                          <span className="text-[10px] uppercase tracking-wider text-indigo-400 font-bold">
+                            Vault {safeIndex + 1} of {vaultCardItems.length}
+                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => setActiveVaultIndex(prev => Math.max(0, prev - 1))}
+                              disabled={safeIndex === 0}
+                              className="px-3 py-1 bg-slate-800 hover:bg-slate-750 border border-slate-700 rounded text-[10px] text-slate-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                            >
+                              Prev
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setActiveVaultIndex(prev => Math.min(vaultCardItems.length - 1, prev + 1))}
+                              disabled={safeIndex === vaultCardItems.length - 1}
+                              className="px-3 py-1 bg-slate-800 hover:bg-slate-750 border border-slate-700 rounded text-[10px] text-slate-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                            >
+                              Next
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {vaultCardItems.map((item, idx) => {
+                            const d = item.domain;
+                            const isSelected = idx === safeIndex;
+                            const totalCardsCount = d.flashcards.length;
+                            return (
+                              <div
+                                key={item.id}
+                                onClick={() => setActiveVaultIndex(idx)}
+                                className={`relative rounded-2xl border p-4 flex flex-col justify-between transition-all duration-200 cursor-pointer ${
+                                  isSelected
+                                    ? "border-indigo-500/90 bg-slate-950 shadow-xl shadow-indigo-500/10 ring-1 ring-indigo-500/40"
+                                    : "border-slate-800/80 bg-[#080a10]/90 hover:border-slate-700"
+                                }`}
+                              >
+                                <div className="space-y-1.5">
+                                  <div className="flex justify-between items-start gap-2">
+                                    <span className="px-2 py-0.5 rounded text-[8px] font-mono tracking-wider uppercase text-indigo-400 bg-indigo-500/10 border border-indigo-500/20">
+                                      {d.subject}
+                                    </span>
+                                    <div className="flex gap-1 shrink-0">
+                                      {d.aiProviders.slice(0, 2).map(p => (
+                                        <span key={p} className="text-[7.5px] font-mono text-pink-400 bg-pink-500/10 border border-pink-500/20 px-1 py-0.2 rounded-full">
+                                          {p.split(" ")[0]}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                  <h3 className="text-base font-serif text-slate-100 font-medium line-clamp-1 mt-1">
+                                    {d.topic}
+                                  </h3>
+                                  <p className="text-[10px] text-slate-400 line-clamp-2 leading-relaxed">
+                                    {d.overview}
+                                  </p>
+                                </div>
+
+                                <div className="grid grid-cols-3 gap-1.5 py-3">
+                                  <div className="p-1.5 bg-slate-900/80 rounded-lg border border-slate-800 text-center">
+                                    <span className="text-[7px] font-mono text-slate-500 uppercase block">Landmarks</span>
+                                    <strong className="text-[8.5px] text-slate-300 block mt-0.5">{d.concepts.length}</strong>
+                                  </div>
+                                  <div className="p-1.5 bg-slate-900/80 rounded-lg border border-slate-800 text-center">
+                                    <span className="text-[7px] font-mono text-slate-500 uppercase block">Flashcards</span>
+                                    <strong className="text-[8.5px] text-slate-300 block mt-0.5">{totalCardsCount}</strong>
+                                  </div>
+                                  <div className="p-1.5 bg-slate-900/80 rounded-lg border border-slate-800 text-center">
+                                    <span className="text-[7px] font-mono text-slate-500 uppercase block">Sessions</span>
+                                    <strong className="text-[8.5px] text-slate-300 block mt-0.5">{d.sessions.length || 1}</strong>
+                                  </div>
+                                </div>
+
+                                <div className="space-y-1.5">
+                                  <div className="h-1.5 w-full bg-slate-900 rounded-full overflow-hidden">
+                                    <div 
+                                      style={{ width: `${d.masteryScore}%` }}
+                                      className="h-full bg-gradient-to-r from-blue-600 to-indigo-500 rounded-full"
+                                    />
+                                  </div>
+                                  <div className="flex justify-between items-center text-[7.5px] font-mono text-slate-500 uppercase tracking-widest pt-1">
+                                    <span>{d.masteryScore}% Mastery</span>
+                                    <span>{isSelected ? "Active Selected" : "Tap to focus"}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
                       {/* Active Selected Domain Details */}
                       {activeItem && (() => {
                         const d = activeItem.domain;
@@ -956,7 +1180,7 @@ export default function FlashcardLibrary({
 
                             <div className="space-y-3 pt-2">
                               <span className="text-[9px] font-mono text-slate-400 uppercase tracking-wider block">
-                                🏰 Vault Overview & Socratic Insights
+                                🏰 Vault Overview & Study Insights
                               </span>
                               <div className="p-4 bg-slate-950/80 border border-slate-900 rounded-xl text-xs text-slate-300 font-sans leading-relaxed space-y-3">
                                 <p className="font-light leading-relaxed">
@@ -1102,17 +1326,9 @@ export default function FlashcardLibrary({
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {activeDomain.equations.map((eq, i) => (
-                        <div key={i} className="p-4 rounded-xl border border-slate-850 bg-slate-950/40 space-y-3">
-                          <span className="text-[9px] font-mono text-indigo-400 uppercase tracking-widest block">
-                            {eq.label || "DERIVATION"}
-                          </span>
-                          
-                          {/* Code notation math container */}
-                          <div className="p-3 rounded bg-slate-950 border border-slate-900 text-center font-mono text-xs text-white overflow-x-auto select-all">
-                            <code>{eq.latex}</code>
-                          </div>
-
-                          <p className="text-[10px] text-slate-400 font-light leading-relaxed">
+                        <div key={i} className="p-3.5 rounded-xl border border-slate-850 bg-slate-950/40 space-y-2">
+                          <MathFormula latex={eq.latex} label={eq.label || "FORMULATION"} />
+                          <p className="text-[10px] text-slate-400 font-light leading-relaxed px-1">
                             {eq.explanation}
                           </p>
                         </div>
@@ -1126,7 +1342,7 @@ export default function FlashcardLibrary({
                   <div className="p-6 rounded-2xl border border-slate-800/90 bg-slate-900/30 backdrop-blur-sm space-y-4">
                     <h3 className="font-serif text-lg text-white font-medium flex items-center gap-2">
                       <FileText className="w-4.5 h-4.5 text-indigo-400" />
-                      Worked Socratic Proofs & Examples
+                      Worked Proofs & Examples
                     </h3>
 
                     <div className="space-y-4">
@@ -1258,7 +1474,7 @@ export default function FlashcardLibrary({
                   </p>
                 </div>
 
-                {/* Socratic Reflections Gateway */}
+                {/* Student Reflections Gateway */}
                 {activeDomain.reflections.length > 0 && (
                   <div className="p-6 rounded-2xl border border-slate-800/90 bg-slate-900/30 backdrop-blur-sm space-y-4">
                     <h3 className="font-serif text-sm text-slate-200 font-medium flex items-center gap-1.5">
@@ -1270,7 +1486,7 @@ export default function FlashcardLibrary({
                       {activeDomain.reflections.map((ref, i) => (
                         <div key={i} className="p-3 rounded-lg bg-slate-950/40 border border-slate-900 text-[11px] font-mono space-y-1.5">
                           <div className="flex justify-between items-center text-[9px] text-slate-500">
-                            <span>Socratic Prompt</span>
+                            <span>Study Question</span>
                             <span>{ref.timestamp}</span>
                           </div>
                           <p className="text-slate-300 italic">"{ref.prompt}"</p>
@@ -1292,7 +1508,7 @@ export default function FlashcardLibrary({
                   <div>
                     <h3 className="text-sm font-semibold text-slate-100">Active Recall Testing</h3>
                     <p className="text-[11px] text-slate-400 mt-1 max-w-xs mx-auto leading-relaxed">
-                      Evaluate your photographic recall on {activeDomain.flashcards.length} cards compiled for this Socratic study cycle.
+                      Evaluate your photographic recall on {activeDomain.flashcards.length} cards compiled for this study cycle.
                     </p>
                   </div>
 
@@ -1315,7 +1531,7 @@ export default function FlashcardLibrary({
                 <div className="p-6 rounded-2xl border border-slate-800/90 bg-slate-900/30 backdrop-blur-sm space-y-4">
                   <h3 className="font-serif text-sm text-slate-200 font-medium flex items-center gap-1.5">
                     <Calendar className="w-4 h-4 text-indigo-400" />
-                    Contributing Socratic Sessions
+                    Contributing Study Sessions
                   </h3>
 
                   <div className="space-y-2.5">
@@ -1329,7 +1545,7 @@ export default function FlashcardLibrary({
                             {sess.title.replace("Session: ", "")}
                           </h4>
                           <span className="text-[9px] text-slate-500 font-mono mt-0.5 block">
-                            Socratic Scaffolding Progress: {sess.progress}%
+                            Study Progress: {sess.progress}%
                           </span>
                         </div>
 
@@ -1350,10 +1566,10 @@ export default function FlashcardLibrary({
                       <div className="p-3.5 rounded-xl border border-slate-850 bg-slate-950/40 flex items-center justify-between gap-4">
                         <div>
                           <h4 className="text-xs font-semibold text-slate-300">
-                            Intro Socratic Session
+                            Intro Study Session
                           </h4>
                           <span className="text-[9px] text-slate-500 font-mono mt-0.5 block">
-                            Historical initial socratic download
+                            Initial study session
                           </span>
                         </div>
                         <span className="text-[10px] text-slate-600 font-mono italic">
@@ -1382,7 +1598,7 @@ export default function FlashcardLibrary({
                   <BookOpen className="w-10 h-10 text-slate-600 mx-auto stroke-[1.5]" />
                   <h3 className="font-serif italic text-lg text-white font-medium">Collection is Empty</h3>
                   <p className="text-xs text-slate-400 max-w-xs mx-auto">
-                    No active recall cards have been compiled for this collection yet. Continue Socratic study sessions to auto-generate cards.
+                    No active recall cards have been compiled for this collection yet. Continue study sessions to auto-generate cards.
                   </p>
                   <button
                     onClick={exitQuiz}
@@ -1402,7 +1618,7 @@ export default function FlashcardLibrary({
 
                   {/* TACTILE 3D CARD BOX */}
                   <div 
-                    className="perspective-1000 h-[280px] w-full cursor-pointer select-none"
+                    className="perspective-1000 h-[220px] min-[400px]:h-[250px] sm:h-[280px] w-full cursor-pointer select-none"
                     onClick={handleFlipCard}
                   >
                     <div 
@@ -1411,64 +1627,64 @@ export default function FlashcardLibrary({
                       }`}
                     >
                       {/* CARD FRONT */}
-                      <div className="absolute inset-0 bg-slate-900 border border-slate-800 rounded-2xl p-8 flex flex-col justify-between backface-hidden shadow-2xl">
-                        <span className="text-[9px] font-mono text-indigo-400 uppercase tracking-widest block">
+                      <div className="absolute inset-0 bg-slate-900 border border-slate-800 rounded-2xl p-4 min-[400px]:p-5 sm:p-8 flex flex-col justify-between backface-hidden shadow-2xl">
+                        <span className="text-[8px] sm:text-[9px] font-mono text-indigo-400 uppercase tracking-widest block">
                           Active Recall Prompt (Box {activeDomain.flashcards[currentCardIndex].box || 1})
                         </span>
-                        <div className="flex-1 flex items-center justify-center text-center">
-                          <p className="font-serif italic text-lg text-white font-medium leading-relaxed max-w-lg">
+                        <div className="flex-1 flex items-center justify-center text-center overflow-y-auto my-1 no-scrollbar">
+                          <p className="font-serif italic text-sm min-[400px]:text-base sm:text-lg text-white font-medium leading-relaxed max-w-lg">
                             {activeDomain.flashcards[currentCardIndex].front}
                           </p>
                         </div>
-                        <span className="text-[10px] text-slate-500 text-center font-mono flex items-center justify-center gap-1">
-                          <Eye className="w-3.5 h-3.5" /> Click to expose Leitner answer
+                        <span className="text-[9px] sm:text-[10px] text-slate-500 text-center font-mono flex items-center justify-center gap-1">
+                          <Eye className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> Tap/Click to expose answer
                         </span>
                       </div>
 
                       {/* CARD BACK */}
-                      <div className="absolute inset-0 bg-slate-950 border border-slate-800 rounded-2xl p-8 flex flex-col justify-between backface-hidden rotate-y-180 shadow-2xl">
-                        <span className="text-[9px] font-mono text-emerald-400 uppercase tracking-widest block">
+                      <div className="absolute inset-0 bg-slate-950 border border-slate-800 rounded-2xl p-4 min-[400px]:p-5 sm:p-8 flex flex-col justify-between backface-hidden rotate-y-180 shadow-2xl">
+                        <span className="text-[8px] sm:text-[9px] font-mono text-emerald-400 uppercase tracking-widest block">
                           Leitner Calibrated Solution
                         </span>
-                        <div className="flex-1 flex items-center justify-center text-center">
-                          <p className="font-sans text-slate-200 text-sm leading-relaxed max-w-lg font-light">
+                        <div className="flex-1 flex items-center justify-center text-center overflow-y-auto my-1 no-scrollbar">
+                          <p className="font-sans text-slate-200 text-xs sm:text-sm leading-relaxed max-w-lg font-light">
                             {activeDomain.flashcards[currentCardIndex].back}
                           </p>
                         </div>
-                        <span className="text-[10px] text-slate-500 text-center font-mono">
-                          Evaluate your recall accuracy below
+                        <span className="text-[9px] sm:text-[10px] text-slate-500 text-center font-mono">
+                          Evaluate recall accuracy below
                         </span>
                       </div>
                     </div>
                   </div>
 
                   {/* INTERACTIVE LEITNER FEEDBACK BUTTONS */}
-                  <div className="grid grid-cols-3 gap-3 pt-2">
+                  <div className="grid grid-cols-3 gap-1.5 sm:gap-3 pt-2">
                     <button
                       id="btn_recall_hard"
                       onClick={(e) => { e.stopPropagation(); handleReviewFeedback("hard"); }}
-                      className="p-4 rounded-xl border border-red-900/30 bg-red-950/10 hover:bg-red-950/30 text-red-400 text-center transition-colors cursor-pointer"
+                      className="p-2 sm:p-4 rounded-xl border border-red-900/30 bg-red-950/10 hover:bg-red-950/30 text-red-400 text-center transition-colors cursor-pointer"
                     >
-                      <span className="block text-xs font-semibold">Struggled (Hard)</span>
-                      <span className="block text-[10px] text-red-500/80 font-mono mt-0.5">Reset to Box 1</span>
+                      <span className="block text-[10px] sm:text-xs font-semibold">Struggled</span>
+                      <span className="block text-[8px] sm:text-[10px] text-red-500/80 font-mono mt-0.5">Box 1</span>
                     </button>
 
                     <button
                       id="btn_recall_medium"
                       onClick={(e) => { e.stopPropagation(); handleReviewFeedback("medium"); }}
-                      className="p-4 rounded-xl border border-slate-800 bg-slate-900 hover:bg-slate-850 text-slate-300 text-center transition-colors cursor-pointer"
+                      className="p-2 sm:p-4 rounded-xl border border-slate-800 bg-slate-900 hover:bg-slate-850 text-slate-300 text-center transition-colors cursor-pointer"
                     >
-                      <span className="block text-xs font-semibold">Retained (Medium)</span>
-                      <span className="block text-[10px] text-slate-500 font-mono mt-0.5">Keep Box State</span>
+                      <span className="block text-[10px] sm:text-xs font-semibold">Retained</span>
+                      <span className="block text-[8px] sm:text-[10px] text-slate-500 font-mono mt-0.5">Keep Box</span>
                     </button>
 
                     <button
                       id="btn_recall_easy"
                       onClick={(e) => { e.stopPropagation(); handleReviewFeedback("easy"); }}
-                      className="p-4 rounded-xl border border-emerald-900/30 bg-emerald-950/10 hover:bg-emerald-950/30 text-emerald-400 text-center transition-colors cursor-pointer"
+                      className="p-2 sm:p-4 rounded-xl border border-emerald-900/30 bg-emerald-950/10 hover:bg-emerald-950/30 text-emerald-400 text-center transition-colors cursor-pointer"
                     >
-                      <span className="block text-xs font-semibold">Mastered (Easy)</span>
-                      <span className="block text-[10px] text-emerald-500/80 font-mono mt-0.5">Promote Box +1</span>
+                      <span className="block text-[10px] sm:text-xs font-semibold">Mastered</span>
+                      <span className="block text-[8px] sm:text-[10px] text-emerald-500/80 font-mono mt-0.5">Box +1</span>
                     </button>
                   </div>
                 </div>
@@ -1501,6 +1717,14 @@ export default function FlashcardLibrary({
           )}
         </div>
       )}
+      {/* Session PDF Export Modal */}
+      <SessionExportModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        sessions={sessions}
+        initialSessionId={exportSessionTargetId}
+        user={user}
+      />
     </div>
   );
 }

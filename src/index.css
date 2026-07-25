@@ -1,11 +1,18 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import "katex/dist/katex.min.css";
 @import "tailwindcss";
 
 html {
-  font-size: 16px; /* Exactly 16px browser standard baseline to map rems accurately to px */
+  font-size: 14px; /* Mobile baseline (14px) - keeps layout compact and prevents text overflow on phones */
   font-family: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+@media (min-width: 640px) {
+  html {
+    font-size: 16px; /* Tablet & Desktop baseline (16px) - preserves standard scale */
+  }
 }
 
 @theme {

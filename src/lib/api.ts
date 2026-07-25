@@ -13,32 +13,56 @@ export async function fetchSession(): Promise<UserProfile | null> {
   }
 }
 
-export async function loginUser(email: string, password: string): Promise<UserProfile> {
+export interface AuthResponse {
+  user?: UserProfile;
+  requiresVerification?: boolean;
+  email?: string;
+  message?: string;
+}
+
+export async function loginUser(email: string, password: string): Promise<AuthResponse> {
   const res = await fetch(`${API_BASE}/api/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
   });
-  if (!res.ok) {
-    const err = await res.json();
-    throw new Error(err.error || "Failed to log in");
-  }
   const data = await res.json();
-  return data.user;
+  if (!res.ok) {
+    const error: any = new Error(data.error || "Failed to log in");
+    error.requiresVerification = data.requiresVerification;
+    error.email = data.email || email;
+    throw error;
+  }
+  return data;
 }
 
-export async function registerUser(payload: Partial<UserProfile> & { password?: string }): Promise<UserProfile> {
+export async function registerUser(payload: Partial<UserProfile> & { password?: string }): Promise<AuthResponse> {
   const res = await fetch(`${API_BASE}/api/auth/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  if (!res.ok) {
-    const err = await res.json();
-    throw new Error(err.error || "Failed to register");
-  }
   const data = await res.json();
-  return data.user;
+  if (!res.ok) {
+    const error: any = new Error(data.error || "Failed to register");
+    error.requiresVerification = data.requiresVerification;
+    error.email = data.email || payload.email;
+    throw error;
+  }
+  return data;
+}
+
+export async function resendVerificationEmail(email: string): Promise<{ message: string }> {
+  const res = await fetch(`${API_BASE}/api/auth/resend-verification`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || "Failed to resend verification email");
+  }
+  return data;
 }
 
 export async function logoutUser(): Promise<void> {
@@ -115,15 +139,27 @@ export async function sendChatMessage(sessionId: string, messageText: string, is
   return data.session;
 }
 
-export async function enhancePrompt(originalPrompt: string, topic: string, sessionId?: string | null): Promise<{ enhancedPrompt: string, isConversational: boolean }> {
+export async function enhancePrompt(originalPrompt: string, topic: string, sessionId?: string | null): Promise<{
+  enhancedPrompt: string;
+  isConversational: boolean;
+  contextPacket?: string;
+  summary?: any;
+  ecePacket?: any;
+}> {
   const res = await fetch(`${API_BASE}/api/study/enhance-prompt`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ originalPrompt, topic, sessionId }),
   });
-  if (!res.ok) throw new Error("Failed to enhance prompt");
+  if (!res.ok) throw new Error("Failed to assemble educational context");
   const data = await res.json();
-  return { enhancedPrompt: data.enhancedPrompt, isConversational: !!data.isConversational };
+  return {
+    enhancedPrompt: data.enhancedPrompt || originalPrompt,
+    isConversational: !!data.isConversational,
+    contextPacket: data.contextPacket,
+    summary: data.summary,
+    ecePacket: data.ecePacket,
+  };
 }
 
 export async function clearStudySession(sessionId: string): Promise<StudySession> {

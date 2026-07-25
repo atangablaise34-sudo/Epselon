@@ -7,7 +7,8 @@ import {
   ChevronRight, Lock, Eye, Compass, ShieldAlert, Zap,
   Award, RefreshCw, Cpu, Stethoscope, TrendingUp, Sprout, Cog, Globe
 } from "lucide-react";
-import Markdown from "react-markdown";
+import FormattedMarkdown from "../../components/FormattedMarkdown";
+import MathFormula from "../../components/MathFormula";
 import { ChatMessage, UserProfile, StudySession } from "../../types";
 
 interface LearningCanvasViewProps {
@@ -362,7 +363,7 @@ export default function LearningCanvasView({
 
           <div className={`p-5 rounded-2xl ${cardBg} border-l-4 border-l-blue-600`}>
             <div className="markdown-body text-sm leading-relaxed text-slate-300 font-light space-y-3">
-              <Markdown>{definitionText}</Markdown>
+              <FormattedMarkdown>{definitionText}</FormattedMarkdown>
             </div>
           </div>
 
@@ -401,10 +402,10 @@ export default function LearningCanvasView({
             </div>
 
             <div className="markdown-body text-sm md:text-[15px] leading-relaxed font-light text-slate-300 space-y-4">
-              <Markdown>{explanationText}</Markdown>
+              <FormattedMarkdown>{explanationText}</FormattedMarkdown>
               {secondaryDetailText && (
                 <div className="text-xs text-slate-400 leading-relaxed border-l-2 border-slate-800 pl-4 py-1 italic font-light">
-                  <Markdown>{secondaryDetailText}</Markdown>
+                  <FormattedMarkdown>{secondaryDetailText}</FormattedMarkdown>
                 </div>
               )}
             </div>
@@ -504,17 +505,7 @@ export default function LearningCanvasView({
 
             {/* Govering Equation Box (if applicable) */}
             {message.equation && (
-              <div className={`p-5 rounded-xl bg-slate-900 border border-slate-800 text-center space-y-2`}>
-                <span className="text-[9px] font-mono text-slate-500 uppercase tracking-widest block">
-                  Governing Theoretical Equation
-                </span>
-                <div className="text-lg font-mono text-brand-light font-bold select-all overflow-x-auto py-1">
-                  {message.equation}
-                </div>
-                <span className="text-[9px] text-slate-500 font-light block">
-                  Double-click text to copy mathematically scaled string.
-                </span>
-              </div>
+              <MathFormula latex={message.equation} label="Governing Theoretical Equation" />
             )}
 
             {/* Local African Context Case Study */}
@@ -577,7 +568,7 @@ export default function LearningCanvasView({
 
               {hasProgressiveParts ? (
                 <div className="text-xs leading-relaxed font-light text-slate-300 space-y-2">
-                  <Markdown>{message.progressiveParts![4].content}</Markdown>
+                  <FormattedMarkdown>{message.progressiveParts![4].content}</FormattedMarkdown>
                 </div>
               ) : (
                 <div className="space-y-4 divide-y divide-slate-800/40">
