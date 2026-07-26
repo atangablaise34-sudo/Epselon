@@ -1167,7 +1167,7 @@ app.post("/api/study/define", async (req, res) => {
     if (ai && !isGeminiQuotaExceeded) {
       try {
         const response = await ai.models.generateContent({
-          model: "gemini-3.5-flash",
+          model: "gemini-3.1-flash-lite",
           contents: `Define the term "${cleanedWord}" specifically inside the academic context of the study focus: "${focus}".
 The current difficulty level is "${difficulty}".
 Here are recent messages from the study session to guide your contextual understanding:
@@ -1688,6 +1688,8 @@ INJECTED CONSTRAINTS:
 ${protocolState.pedagogy?.scaffoldingRules.map((rule, idx) => `${idx + 1}. ${rule}`).join("\n")}
 
 Your objective is to provide an incredibly academic, professional, and structured learning experience, UNLESS the user is just greeting you or making small talk.${convoPromptAddon}
+
+CRITICAL PERFORMANCE OPTIMIZATION: Keep ALL text fields (explanation, progressive parts, questions, analogies, case studies, etc.) EXTREMELY short and concise (1-2 sentences maximum per field). This is absolutely necessary to ensure rapid API response times during live interactions.
 - If the user's latest input is conversational (e.g., "hi", "hello", "how are you", "thanks", "I'm ready"), respond naturally, conversationally, and warmly. Do not generate flashcards, practice questions, or equations.
 - If the user's input is educational/topical:
   - If Socratic teaching style is requested: respond with disciplines, Socratic questions, guiding them to answers instead of handing them out instantly.
@@ -1760,7 +1762,7 @@ Return your response strictly in the following JSON schema format:
       }
 
       const response = await generateContentWithFallback(ai, {
-        model: protocolState.routing?.model || "gemini-3.5-flash",
+        model: protocolState.routing?.model || "gemini-3.1-flash-lite",
         contents: contents,
         config: forceConvo ? undefined : {
           responseMimeType: "application/json",
@@ -2241,7 +2243,7 @@ app.post("/api/study/teacher-lens-chat", async (req, res) => {
     if (ai && !isGeminiQuotaExceeded) {
       try {
         const response = await generateContentWithFallback(ai, {
-          model: "gemini-3.5-flash",
+          model: "gemini-3.1-flash-lite",
           contents: [
             {
               role: "user",

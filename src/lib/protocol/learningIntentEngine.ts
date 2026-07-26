@@ -35,6 +35,10 @@ export class LearningIntentEngine {
       };
     }
 
+    // SPEED OPTIMIZATION: Always use fast local intent classification instead of 
+    // waiting 1-2 seconds for an LLM to categorize the intent.
+    return this.classifyLocalFallback(prompt);
+
     if (LearningIntentEngine.isQuotaExceeded) {
       if (Date.now() > LearningIntentEngine.quotaExceededResetTime) {
         LearningIntentEngine.isQuotaExceeded = false;
@@ -72,7 +76,7 @@ Return your response strictly in JSON matching this schema:
 }`;
 
       const response = await this.ai.models.generateContent({
-        model: "gemini-3.5-flash",
+        model: "gemini-3.1-flash-lite",
         contents: `Classify this student prompt:\n"${prompt}"`,
         config: {
           systemInstruction,

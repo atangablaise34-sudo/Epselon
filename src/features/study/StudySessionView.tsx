@@ -42,7 +42,7 @@ interface ReflectionCard {
 }
 
 const PROVIDER_DEFAULT_MODELS: Record<string, string> = {
-  gemini: "gemini-3.5-flash",
+  gemini: "gemini-3.1-flash-lite",
   chatgpt: "gpt-4o",
   claude: "claude-3-5-sonnet",
   deepseek: "deepseek-v3",
@@ -890,7 +890,7 @@ export default function StudySessionView({
     EventBus.publish("PROMPT_SENT");
     try {
       // Update provider preferences
-      const nextModel = PROVIDER_DEFAULT_MODELS[selectedAI] || "gemini-3.5-flash";
+      const nextModel = PROVIDER_DEFAULT_MODELS[selectedAI] || "gemini-3.1-flash-lite";
       await updatePreferences({
         selectedProvider: selectedAI,
         selectedModel: nextModel,
@@ -2452,7 +2452,7 @@ export default function StudySessionView({
                                     type="button"
                                     onClick={async () => {
                                       try {
-                                        const nextModel = PROVIDER_DEFAULT_MODELS[opt.key] || "gemini-3.5-flash";
+                                        const nextModel = PROVIDER_DEFAULT_MODELS[opt.key] || "gemini-3.1-flash-lite";
                                         await updatePreferences({
                                           selectedProvider: opt.key,
                                           selectedModel: nextModel,

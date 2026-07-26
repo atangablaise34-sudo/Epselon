@@ -16,7 +16,7 @@
       "masteryProgress": 77,
       "learningStreak": 14,
       "cardsMastered": 452,
-      "totalCards": 600,
+      "totalCards": 604,
       "preferences": {
         "theme": "obsidian",
         "accentColor": "blue",
@@ -246,6 +246,326 @@
             "recommendedNextConcepts": [],
             "recentActivity": false,
             "ringProgress": 35
+          },
+          {
+            "id": "node_general",
+            "label": "General",
+            "canonicalName": "General",
+            "aliases": [
+              "General"
+            ],
+            "definition": "Foundational conceptual map for studying General.",
+            "contexts": [
+              "General Science",
+              "Physics"
+            ],
+            "difficulty": "medium",
+            "examples": [],
+            "equations": [],
+            "prerequisites": [],
+            "relatedConcepts": [],
+            "mastery": 90,
+            "sourceConversations": [],
+            "learningSessions": [
+              "123"
+            ],
+            "group": "general",
+            "confidenceScore": 100,
+            "timesStudied": 8,
+            "timesReviewed": 4,
+            "reflectionScores": [],
+            "practiceScores": [
+              80,
+              80,
+              80,
+              80
+            ],
+            "lastStudiedDate": "2026-07-26T16:55:01.464Z",
+            "state": "Mastered",
+            "prerequisiteConcepts": [],
+            "recommendedNextConcepts": [],
+            "recentActivity": true,
+            "ringProgress": 90
+          },
+          {
+            "id": "node_momentum",
+            "label": "Momentum",
+            "canonicalName": "Momentum",
+            "aliases": [
+              "Momentum"
+            ],
+            "definition": "The product of the mass and velocity of an object, describing its quantity of motion.",
+            "contexts": [
+              "Newtonian Physics"
+            ],
+            "difficulty": "medium",
+            "examples": [],
+            "equations": [],
+            "prerequisites": [
+              "Force",
+              "Mass",
+              "Acceleration"
+            ],
+            "relatedConcepts": [
+              "Impulse"
+            ],
+            "mastery": 10,
+            "sourceConversations": [],
+            "learningSessions": [],
+            "group": "newtonian_physics",
+            "confidenceScore": 25,
+            "timesStudied": 0,
+            "timesReviewed": 0,
+            "reflectionScores": [],
+            "practiceScores": [],
+            "lastStudiedDate": "2026-07-26T16:52:58.165Z",
+            "state": "Introduced",
+            "prerequisiteConcepts": [
+              "Force",
+              "Mass",
+              "Acceleration"
+            ],
+            "recommendedNextConcepts": [
+              "Impulse"
+            ],
+            "recentActivity": false,
+            "ringProgress": 10
+          },
+          {
+            "id": "node_force",
+            "label": "Force",
+            "canonicalName": "Force",
+            "aliases": [
+              "Force"
+            ],
+            "definition": "An interaction that, when unopposed, will change the motion of an object.",
+            "contexts": [
+              "Newtonian Physics"
+            ],
+            "difficulty": "easy",
+            "examples": [],
+            "equations": [],
+            "prerequisites": [
+              "Newton's Laws"
+            ],
+            "relatedConcepts": [
+              "Mass",
+              "Acceleration"
+            ],
+            "mastery": 10,
+            "sourceConversations": [],
+            "learningSessions": [],
+            "group": "newtonian_physics",
+            "confidenceScore": 25,
+            "timesStudied": 0,
+            "timesReviewed": 0,
+            "reflectionScores": [],
+            "practiceScores": [],
+            "lastStudiedDate": "2026-07-26T16:52:58.165Z",
+            "state": "Introduced",
+            "prerequisiteConcepts": [
+              "Newton's Laws"
+            ],
+            "recommendedNextConcepts": [
+              "Mass",
+              "Acceleration"
+            ],
+            "recentActivity": false,
+            "ringProgress": 10
+          },
+          {
+            "id": "node_newtons_laws",
+            "label": "Newton's Laws",
+            "canonicalName": "Newton's Laws",
+            "aliases": [
+              "Newton's Laws"
+            ],
+            "definition": "Three physical laws that together laid the foundation for classical mechanics.",
+            "contexts": [
+              "Newtonian Physics"
+            ],
+            "difficulty": "easy",
+            "examples": [],
+            "equations": [],
+            "prerequisites": [
+              "Classical Wave Physics"
+            ],
+            "relatedConcepts": [
+              "Force",
+              "Mass",
+              "Acceleration"
+            ],
+            "mastery": 10,
+            "sourceConversations": [],
+            "learningSessions": [],
+            "group": "newtonian_physics",
+            "confidenceScore": 25,
+            "timesStudied": 0,
+            "timesReviewed": 0,
+            "reflectionScores": [],
+            "practiceScores": [],
+            "lastStudiedDate": "2026-07-26T16:52:58.166Z",
+            "state": "Introduced",
+            "prerequisiteConcepts": [
+              "Classical Wave Physics"
+            ],
+            "recommendedNextConcepts": [
+              "Force"
+            ],
+            "recentActivity": false,
+            "ringProgress": 10
+          },
+          {
+            "id": "node_classical_wave_physics",
+            "label": "Classical Wave Physics",
+            "canonicalName": "Classical Wave Physics",
+            "aliases": [
+              "Classical Wave Physics"
+            ],
+            "definition": "Foundational conceptual map for studying Classical Wave Physics.",
+            "contexts": [
+              "General Science"
+            ],
+            "difficulty": "medium",
+            "examples": [],
+            "equations": [],
+            "prerequisites": [],
+            "relatedConcepts": [],
+            "mastery": 10,
+            "sourceConversations": [],
+            "learningSessions": [],
+            "group": "general",
+            "confidenceScore": 25,
+            "timesStudied": 0,
+            "timesReviewed": 0,
+            "reflectionScores": [],
+            "practiceScores": [],
+            "lastStudiedDate": "2026-07-26T16:52:58.166Z",
+            "state": "Introduced",
+            "prerequisiteConcepts": [],
+            "recommendedNextConcepts": [],
+            "recentActivity": false,
+            "ringProgress": 10
+          },
+          {
+            "id": "node_mass",
+            "label": "Mass",
+            "canonicalName": "Mass",
+            "aliases": [
+              "Mass"
+            ],
+            "definition": "A quantitative measure of inertia, a fundamental property of all matter.",
+            "contexts": [
+              "Newtonian Physics"
+            ],
+            "difficulty": "easy",
+            "examples": [],
+            "equations": [],
+            "prerequisites": [
+              "Newton's Laws"
+            ],
+            "relatedConcepts": [
+              "Force",
+              "Acceleration"
+            ],
+            "mastery": 10,
+            "sourceConversations": [],
+            "learningSessions": [],
+            "group": "newtonian_physics",
+            "confidenceScore": 25,
+            "timesStudied": 0,
+            "timesReviewed": 0,
+            "reflectionScores": [],
+            "practiceScores": [],
+            "lastStudiedDate": "2026-07-26T16:52:58.166Z",
+            "state": "Introduced",
+            "prerequisiteConcepts": [
+              "Newton's Laws"
+            ],
+            "recommendedNextConcepts": [
+              "Momentum"
+            ],
+            "recentActivity": false,
+            "ringProgress": 10
+          },
+          {
+            "id": "node_acceleration",
+            "label": "Acceleration",
+            "canonicalName": "Acceleration",
+            "aliases": [
+              "Acceleration"
+            ],
+            "definition": "The rate at which the velocity of an object changes with time.",
+            "contexts": [
+              "Newtonian Physics"
+            ],
+            "difficulty": "easy",
+            "examples": [],
+            "equations": [],
+            "prerequisites": [
+              "Newton's Laws"
+            ],
+            "relatedConcepts": [
+              "Force",
+              "Mass"
+            ],
+            "mastery": 10,
+            "sourceConversations": [],
+            "learningSessions": [],
+            "group": "newtonian_physics",
+            "confidenceScore": 25,
+            "timesStudied": 0,
+            "timesReviewed": 0,
+            "reflectionScores": [],
+            "practiceScores": [],
+            "lastStudiedDate": "2026-07-26T16:52:58.166Z",
+            "state": "Introduced",
+            "prerequisiteConcepts": [
+              "Newton's Laws"
+            ],
+            "recommendedNextConcepts": [
+              "Momentum"
+            ],
+            "recentActivity": false,
+            "ringProgress": 10
+          },
+          {
+            "id": "node_impulse",
+            "label": "Impulse",
+            "canonicalName": "Impulse",
+            "aliases": [
+              "Impulse"
+            ],
+            "definition": "The integral of a force over the time interval for which it acts, changing momentum.",
+            "contexts": [
+              "Newtonian Physics"
+            ],
+            "difficulty": "medium",
+            "examples": [],
+            "equations": [],
+            "prerequisites": [
+              "Momentum"
+            ],
+            "relatedConcepts": [
+              "Force"
+            ],
+            "mastery": 10,
+            "sourceConversations": [],
+            "learningSessions": [],
+            "group": "newtonian_physics",
+            "confidenceScore": 25,
+            "timesStudied": 0,
+            "timesReviewed": 0,
+            "reflectionScores": [],
+            "practiceScores": [],
+            "lastStudiedDate": "2026-07-26T16:52:58.166Z",
+            "state": "Introduced",
+            "prerequisiteConcepts": [
+              "Momentum"
+            ],
+            "recommendedNextConcepts": [],
+            "recentActivity": false,
+            "ringProgress": 10
           }
         ],
         "links": [
@@ -268,6 +588,96 @@
           {
             "source": "eigen",
             "target": "hilbert"
+          },
+          {
+            "source": "wave_fn",
+            "target": "node_general",
+            "type": "Builds Upon",
+            "strength": 30
+          },
+          {
+            "source": "wave_fn",
+            "target": "node_classical_wave_physics",
+            "type": "Builds Upon",
+            "strength": 30
+          },
+          {
+            "source": "node_classical_wave_physics",
+            "target": "node_newtons_laws",
+            "type": "Prerequisite",
+            "strength": 60
+          },
+          {
+            "source": "node_newtons_laws",
+            "target": "node_force",
+            "type": "Builds Upon",
+            "strength": 40
+          },
+          {
+            "source": "node_newtons_laws",
+            "target": "node_mass",
+            "type": "Prerequisite",
+            "strength": 60
+          },
+          {
+            "source": "node_mass",
+            "target": "node_force",
+            "type": "Builds Upon",
+            "strength": 40
+          },
+          {
+            "source": "node_newtons_laws",
+            "target": "node_acceleration",
+            "type": "Prerequisite",
+            "strength": 60
+          },
+          {
+            "source": "node_acceleration",
+            "target": "node_force",
+            "type": "Builds Upon",
+            "strength": 40
+          },
+          {
+            "source": "node_acceleration",
+            "target": "node_mass",
+            "type": "Builds Upon",
+            "strength": 40
+          },
+          {
+            "source": "node_force",
+            "target": "node_momentum",
+            "type": "Prerequisite",
+            "strength": 60
+          },
+          {
+            "source": "node_mass",
+            "target": "node_momentum",
+            "type": "Prerequisite",
+            "strength": 60
+          },
+          {
+            "source": "node_acceleration",
+            "target": "node_momentum",
+            "type": "Prerequisite",
+            "strength": 60
+          },
+          {
+            "source": "node_momentum",
+            "target": "node_impulse",
+            "type": "Prerequisite",
+            "strength": 60
+          },
+          {
+            "source": "node_impulse",
+            "target": "node_force",
+            "type": "Builds Upon",
+            "strength": 40
+          },
+          {
+            "source": "node_general",
+            "target": "node_momentum",
+            "type": "Frequently Studied Together",
+            "strength": 40
           }
         ]
       },
@@ -474,6 +884,561 @@
             "timestamp": "Now"
           }
         ]
+      },
+      {
+        "id": "123",
+        "title": "Recovered Session",
+        "focus": "General",
+        "difficulty": "Intermediate",
+        "bloomLevel": "Understand",
+        "strategy": "Socratic",
+        "progress": 16,
+        "prerequisites": [],
+        "outline": [],
+        "messages": [
+          {
+            "id": "msg_qejjn7y20",
+            "sender": "student",
+            "text": "What is quantum mechanics?",
+            "timestamp": "04:52 PM"
+          },
+          {
+            "id": "msg_tj8v1enzt",
+            "sender": "mentor",
+            "text": "Welcome, candidate. As we approach quantum mechanics from a foundational perspective tailored to our Stanford Sciences framework, we must remember that at microscopic scales, classical determinism breaks down. Before we dive into the mathematics, let us consider how we observe the physical world: why do macroscopic systems behave predictably while subatomic particles exhibit probabilities? Reflect on this: if you measure the position of an electron with absolute precision, what happens to your certainty of its momentum?",
+            "timestamp": "04:52 PM",
+            "equation": "i\\hbar \\frac{\\partial\\Psi}{\\partial t} = \\hat{H}\\Psi",
+            "autoNotes": [
+              {
+                "key": "Schrödinger Equation",
+                "val": "The fundamental equation of motion in quantum mechanics describing how the wave function evolves over time."
+              },
+              {
+                "key": "Quantization",
+                "val": "The restriction of physical properties, such as energy or angular momentum, to specific discrete values rather than continuous ranges."
+              }
+            ],
+            "progressiveParts": [
+              {
+                "title": "Core Concept & Definition",
+                "content": "Quantum mechanics is the fundamental mathematical framework in physics that describes nature at the smallest scales of energy of atoms and subatomic particles. Unlike classical mechanics, which assumes continuous variables and deterministic trajectories, quantum theory posits that certain physical properties are quantized (restricted to discrete values) and fundamentally probabilistic."
+              },
+              {
+                "title": "Detailed Breakdown & Analysis",
+                "content": "At the heart of non-relativistic quantum mechanics lies the time-dependent Schrödinger equation, which governs how the quantum state of a physical system changes in time. The wave function Psi contains all the measurable information about the system. To analyze this, we examine the Hamiltonian operator acting on the state vector, linking total energy to spatial and temporal derivatives."
+              },
+              {
+                "title": "Intuitive Analogy & Mental Model",
+                "content": "Imagine trying to map the exact location of a ripple spreading across a vast pond using a single snapshot. If you freeze the water to see the position of the wave peak precisely, you lose all information about how fast and in what direction the wave was traveling. The wave represents the probability distribution rather than a single, solid marble."
+              },
+              {
+                "title": "Practical Application Case Study",
+                "content": "Consider the development of advanced solar photovoltaic grids and localized microgrids across the East African Rift. Optimizing thin-film solar cell efficiency relies heavily on understanding quantum tunneling and bandgap engineering at the nanoscale to capture photons across varying solar spectrums effectively."
+              },
+              {
+                "title": "Common Misconceptions & Traps",
+                "content": "A frequent misconception is that an electron physically 'orbits' a nucleus like a planet until measured. In reality, the electron is described by a stationary or time-evolving probability cloud where the absolute square of the wave function gives the spatial probability density of finding the particle upon measurement."
+              }
+            ],
+            "protocolTrace": {
+              "intent": {
+                "category": "understand_concept",
+                "confidence": 0.85,
+                "reason": "Prompt requests general conceptual elaboration."
+              },
+              "learningIntent": {
+                "intent": "Study",
+                "confidence": 1,
+                "reasoning": "The student is asking for a fundamental concept explanation in physics, which falls directly under deep concept learning and studying an academic topic."
+              },
+              "pipelineRouting": {
+                "pipelineId": "study",
+                "reason": "Routed to Study Pipeline (Confidence: 1) because the user's intent is identified as Study. Reasoning: The student is asking for a fundamental concept explanation in physics, which falls directly under deep concept learning and studying an academic topic."
+              },
+              "routing": {
+                "providerId": "gemini",
+                "model": "gemini-3.5-flash-lite",
+                "justification": "Routing payload to GEMINI (gemini-3.5-flash-lite). Optimized for multimodal spatial contexts, fast latency, and academic structure schema."
+              },
+              "pedagogy": {
+                "style": "Socratic",
+                "bloomLevel": "Analyze & Evaluate",
+                "scaffoldingRules": [
+                  "Break explanations down into digestible, modular steps.",
+                  "Introduce a core mathematical formula only after defining its physical terms.",
+                  "End response with a Socratic question requesting validation or reflection."
+                ],
+                "injectedPrompt": "Apply Socratic pedagogy matching Bloom's level \"Analyze & Evaluate\". Ask deep, guiding questions. Prompt the student to deduce derivations rather than presenting answers instantly. Use analogical reasoning."
+              },
+              "coach": {
+                "original": "What is quantum mechanics?",
+                "enhanced": "What is quantum mechanics?\n\nExplicate for a PhD Candidate student studying General. Provide relevant real-world illustrations, prioritizing regional examples (such as infrastructure, climate, or research projects in Africa if applicable). Structure the conceptual response under Bloom's Taxonomy, beginning with clear, first-principles definitions, followed by step-by-step logical proofs, and concluding with active-recall challenges. Finally, generate 1 practice quiz exercise and 2 reflection questions testing my understanding, along with 2 recommended flashcard items in the exact JSON structure.",
+                "steps": [
+                  {
+                    "text": "What is quantum mechanics?\n\nExplicate for a PhD Candidate student studying General.",
+                    "label": "Academic Identity",
+                    "explanation": "Calibrates model's complexity, technical lexicon, and pedagogical tone to your exact academic cohort."
+                  },
+                  {
+                    "text": "What is quantum mechanics?\n\nExplicate for a PhD Candidate student studying General. Provide relevant real-world illustrations, prioritizing regional examples (such as infrastructure, climate, or research projects in Africa if applicable).",
+                    "label": "Local Context Integration",
+                    "explanation": "Grounds theoretical equations in highly contextual, familiar physical systems to enhance intuitive understanding."
+                  },
+                  {
+                    "text": "What is quantum mechanics?\n\nExplicate for a PhD Candidate student studying General. Provide relevant real-world illustrations, prioritizing regional examples (such as infrastructure, climate, or research projects in Africa if applicable). Structure the conceptual response under Bloom's Taxonomy, beginning with clear, first-principles definitions, followed by step-by-step logical proofs, and concluding with active-recall challenges.",
+                    "label": "Socratic Scaffolding",
+                    "explanation": "Forces the LLM to guide you step-by-step, preventing instant answers and encouraging active cognitive synthesis."
+                  },
+                  {
+                    "text": "What is quantum mechanics?\n\nExplicate for a PhD Candidate student studying General. Provide relevant real-world illustrations, prioritizing regional examples (such as infrastructure, climate, or research projects in Africa if applicable). Structure the conceptual response under Bloom's Taxonomy, beginning with clear, first-principles definitions, followed by step-by-step logical proofs, and concluding with active-recall challenges. Finally, generate 1 practice quiz exercise and 2 reflection questions testing my understanding, along with 2 recommended flashcard items in the exact JSON structure.",
+                    "label": "Assessment & Reflection Decks",
+                    "explanation": "Embeds diagnostic testing blocks immediately into the response to feed the Reinforcement and Mastery engines."
+                  }
+                ]
+              },
+              "curriculum": {
+                "contextSnippet": "Syllabus alignment for Stanford University (Faculty of Sciences). Focusing on core experimental foundations matching the Sciences syllabus curriculum.",
+                "localExamples": [
+                  "West African regional science consortium research guidelines"
+                ]
+              },
+              "practiceQuestion": "What does the absolute square of the wave function (|Ψ|²) physically represent in quantum mechanics?",
+              "reflectionQuestions": [
+                "How does the probabilistic nature of quantum mechanics challenge our classical intuitions of cause and effect?",
+                "In what ways might quantum principles revolutionize computational technologies in resource-constrained environments?"
+              ],
+              "suggestedFlashcards": [
+                {
+                  "front": "What does the operator Ĥ represent in the Schrödinger equation?",
+                  "back": "The Hamiltonian operator, corresponding to the total energy of the system."
+                },
+                {
+                  "front": "Define quantization in the context of subatomic systems.",
+                  "back": "The phenomenon where physical quantities can only take discrete, specific values instead of a continuous spectrum."
+                }
+              ],
+              "pictureMemoryTest": {
+                "question": "According to the detailed breakdown, which specific operator acts on the state vector Psi to link total energy in the Schrödinger equation?",
+                "options": [
+                  "The Hamiltonian operator",
+                  "The Momentum operator",
+                  "The Laplacian operator",
+                  "The Spin operator"
+                ],
+                "correctOptionIdx": 0,
+                "explanationOfCorrectAnswer": "The Hamiltonian operator (H-hat) represents the total energy of the system and governs the time evolution of the wave function."
+              }
+            }
+          },
+          {
+            "id": "msg_j4qqv13g2",
+            "sender": "student",
+            "text": "What is quantum mechanics?",
+            "timestamp": "04:53 PM"
+          },
+          {
+            "id": "msg_u5suks7n4",
+            "sender": "mentor",
+            "text": "Quantum mechanics is the fundamental framework of physics describing nature at the smallest scales—energy levels of atoms and subatomic particles. Unlike classical mechanics, which relies on deterministic trajectories, quantum mechanics utilizes probabilistic wavefunctions to predict the state of a system. To begin our analysis, we must move away from 'particles as points' and toward 'matter as wave-probability distributions.'",
+            "timestamp": "04:53 PM",
+            "equation": "i\\hbar \\frac{\\partial}{\\partial t}\\Psi(r,t) = \\hat{H}\\Psi(r,t)",
+            "autoNotes": [
+              {
+                "key": "Quantization",
+                "val": "The restriction of physical quantities to discrete values rather than a continuous range."
+              },
+              {
+                "key": "Wavefunction",
+                "val": "A mathematical description of the quantum state of a system; its square modulus gives probability density."
+              },
+              {
+                "key": "Hamiltonian",
+                "val": "The operator corresponding to the total energy of a system."
+              }
+            ],
+            "progressiveParts": [
+              {
+                "title": "Core Concept & Definition",
+                "content": "Quantum mechanics is the study of matter and radiation at the atomic and subatomic levels. At this scale, physical properties like position, momentum, and energy are quantized (discrete rather than continuous) and governed by the wave-particle duality, where entities behave as both particles and waves."
+              },
+              {
+                "title": "Detailed Breakdown & Analysis",
+                "content": "The central pillar of quantum mechanics is the Time-Dependent Schrödinger Equation. Here, 'i' is the imaginary unit, 'h-bar' is the reduced Planck constant, 'Psi' is the wavefunction containing all system information, and 'H-hat' is the Hamiltonian operator representing total energy. It demonstrates that the evolution of a system is a linear wave propagation in Hilbert space."
+              },
+              {
+                "title": "Intuitive Analogy & Mental Model",
+                "content": "Think of a classical particle as a ball thrown across a room—you know exactly where it is. Think of a quantum particle as a 'probability cloud' shaped like a musical chord. You cannot pinpoint a single note; instead, you perceive the interference pattern of all possible notes sounding at once until you 'listen' (measure) it."
+              },
+              {
+                "title": "Practical Application Case Study",
+                "content": "Consider the development of solar energy infrastructure in the Sahel. Photovoltaic cells rely on the photoelectric effect—a quantum phenomenon where incoming photons eject electrons from a semiconductor material. Understanding quantum transitions is essential to maximizing cell efficiency in high-temperature, high-irradiance desert environments."
+              },
+              {
+                "title": "Common Misconceptions & Traps",
+                "content": "A frequent trap is 'Quantum Mysticism,' where the observer effect is confused with conscious intent. Measurement in quantum mechanics is a physical interaction (e.g., photon collision), not an act of human awareness. Always treat the wavefunction collapse as a mathematical result of interaction, not cognitive influence."
+              }
+            ],
+            "protocolTrace": {
+              "intent": {
+                "category": "understand_concept",
+                "confidence": 0.85,
+                "reason": "Prompt requests general conceptual elaboration."
+              },
+              "learningIntent": {
+                "intent": "Study",
+                "confidence": 1,
+                "explanation": "Reusing active session context memory intent."
+              },
+              "pipelineRouting": {
+                "pipelineId": "study",
+                "reason": "Routed to Study Pipeline (Confidence: 1) because the user's intent is identified as Study. Reasoning: undefined"
+              },
+              "routing": {
+                "providerId": "gemini",
+                "model": "gemini-3.1-flash-lite",
+                "justification": "Routing payload to GEMINI (gemini-3.1-flash-lite). Optimized for multimodal spatial contexts, fast latency, and academic structure schema."
+              },
+              "pedagogy": {
+                "style": "Socratic",
+                "bloomLevel": "Analyze & Evaluate",
+                "scaffoldingRules": [
+                  "Break explanations down into digestible, modular steps.",
+                  "Introduce a core mathematical formula only after defining its physical terms.",
+                  "End response with a Socratic question requesting validation or reflection."
+                ],
+                "injectedPrompt": "Apply Socratic pedagogy matching Bloom's level \"Analyze & Evaluate\". Ask deep, guiding questions. Prompt the student to deduce derivations rather than presenting answers instantly. Use analogical reasoning."
+              },
+              "coach": {
+                "original": "What is quantum mechanics?",
+                "enhanced": "What is quantum mechanics?\n\nExplicate for a PhD Candidate student studying General. Provide relevant real-world illustrations, prioritizing regional examples (such as infrastructure, climate, or research projects in Africa if applicable). Structure the conceptual response under Bloom's Taxonomy, beginning with clear, first-principles definitions, followed by step-by-step logical proofs, and concluding with active-recall challenges. Finally, generate 1 practice quiz exercise and 2 reflection questions testing my understanding, along with 2 recommended flashcard items in the exact JSON structure.",
+                "steps": [
+                  {
+                    "text": "What is quantum mechanics?\n\nExplicate for a PhD Candidate student studying General.",
+                    "label": "Academic Identity",
+                    "explanation": "Calibrates model's complexity, technical lexicon, and pedagogical tone to your exact academic cohort."
+                  },
+                  {
+                    "text": "What is quantum mechanics?\n\nExplicate for a PhD Candidate student studying General. Provide relevant real-world illustrations, prioritizing regional examples (such as infrastructure, climate, or research projects in Africa if applicable).",
+                    "label": "Local Context Integration",
+                    "explanation": "Grounds theoretical equations in highly contextual, familiar physical systems to enhance intuitive understanding."
+                  },
+                  {
+                    "text": "What is quantum mechanics?\n\nExplicate for a PhD Candidate student studying General. Provide relevant real-world illustrations, prioritizing regional examples (such as infrastructure, climate, or research projects in Africa if applicable). Structure the conceptual response under Bloom's Taxonomy, beginning with clear, first-principles definitions, followed by step-by-step logical proofs, and concluding with active-recall challenges.",
+                    "label": "Socratic Scaffolding",
+                    "explanation": "Forces the LLM to guide you step-by-step, preventing instant answers and encouraging active cognitive synthesis."
+                  },
+                  {
+                    "text": "What is quantum mechanics?\n\nExplicate for a PhD Candidate student studying General. Provide relevant real-world illustrations, prioritizing regional examples (such as infrastructure, climate, or research projects in Africa if applicable). Structure the conceptual response under Bloom's Taxonomy, beginning with clear, first-principles definitions, followed by step-by-step logical proofs, and concluding with active-recall challenges. Finally, generate 1 practice quiz exercise and 2 reflection questions testing my understanding, along with 2 recommended flashcard items in the exact JSON structure.",
+                    "label": "Assessment & Reflection Decks",
+                    "explanation": "Embeds diagnostic testing blocks immediately into the response to feed the Reinforcement and Mastery engines."
+                  }
+                ]
+              },
+              "curriculum": {
+                "contextSnippet": "Syllabus alignment for Stanford University (Faculty of Sciences). Focusing on core experimental foundations matching the Sciences syllabus curriculum.",
+                "localExamples": [
+                  "West African regional science consortium research guidelines"
+                ]
+              },
+              "practiceQuestion": "If a particle's wavefunction is measured, why does the uncertainty principle dictate that we cannot know both position and momentum with infinite precision?",
+              "reflectionQuestions": [
+                "How does the concept of 'quantization' challenge the classical Newtonian view of continuous motion?",
+                "If the Hamiltonian represents total energy, how might a change in the potential energy landscape alter the evolution of the wavefunction?"
+              ],
+              "suggestedFlashcards": [
+                {
+                  "front": "What does the square of the wavefunction modulus |Psi|^2 represent?",
+                  "back": "The probability density of finding a particle at a specific position in space."
+                },
+                {
+                  "front": "Define the Hamiltonian operator in the context of the Schrödinger Equation.",
+                  "back": "The operator representing the sum of kinetic and potential energy for a given quantum system."
+                }
+              ],
+              "pictureMemoryTest": {
+                "question": "Which specific energy-based operator is mentioned in the analysis as being essential to the evolution of the system's wavefunction?",
+                "options": [
+                  "The Kinetic Operator",
+                  "The Hamiltonian Operator",
+                  "The Probability Operator",
+                  "The Interference Operator"
+                ],
+                "correctOptionIdx": 1,
+                "explanationOfCorrectAnswer": "The text identifies the Hamiltonian operator (H-hat) as representing the total energy of a system in the Schrödinger equation."
+              }
+            }
+          },
+          {
+            "id": "msg_8orjfpud3",
+            "sender": "student",
+            "text": "What is quantum mechanics?",
+            "timestamp": "04:53 PM"
+          },
+          {
+            "id": "msg_4be5h96bm",
+            "sender": "mentor",
+            "text": "To understand quantum mechanics at a PhD level, we must transition from the classical Newtonian paradigm of deterministic trajectories to the Hilbert space formalism of state vectors. Quantum mechanics is not merely a set of rules for the small; it is the fundamental description of physical reality where observables are represented by Hermitian operators acting on states in a complex vector space. By analyzing the wave-particle duality and the superposition principle, we move beyond simple observation toward a mathematical framework of probability amplitudes. How does the imposition of the uncertainty principle fundamentally alter our definition of a 'physical state' in a laboratory setting?",
+            "timestamp": "04:53 PM",
+            "equation": "i\\hbar \\frac{\\partial}{\\partial t} \\Psi = \\hat{H}\\Psi",
+            "autoNotes": [
+              {
+                "key": "Hilbert Space",
+                "val": "A complete vector space equipped with an inner product, serving as the workspace for quantum states."
+              },
+              {
+                "key": "Unitary Evolution",
+                "val": "The requirement that the time-evolution of a quantum state preserves the total probability (sum to 1)."
+              }
+            ],
+            "progressiveParts": [
+              {
+                "title": "Core Concept & Definition",
+                "content": "Quantum mechanics describes physical systems using a state vector |ψ⟩ within a Hilbert space. Unlike classical states defined by position and momentum (x, p), a quantum state is a complex-valued amplitude whose square modulus represents the probability density of finding the system in a specific configuration."
+              },
+              {
+                "title": "Detailed Breakdown & Analysis",
+                "content": "We define the state of a system via the Schrödinger equation. The dynamics are governed by the Hamiltonian operator, H, which represents the total energy. The evolution is unitary, ensuring the conservation of probability. The foundational measurement postulate states that for an observable A with operator Â, the only possible measurement outcomes are the eigenvalues of Â. \n\nFormula: i\\hbar \\frac{\\partial}{\\partial t} |\\Psi(t)\\rangle = \\hat{H} |\\Psi(t)\\rangle"
+              },
+              {
+                "title": "Intuitive Analogy & Mental Model",
+                "content": "Consider a guitar string. In classical mechanics, you look for a specific point on the string. In quantum mechanics, the 'state' is the entire vibration pattern of the string (the standing wave). You cannot isolate a single point's 'vibration'; you must analyze the harmonics—the interference of these waves defines the physical reality."
+              },
+              {
+                "title": "Practical Application Case Study",
+                "content": "Consider the development of solar energy infrastructure in the Sahel region of Africa. Efficiency in thin-film photovoltaics relies on quantum tunneling and band-gap engineering—manipulating the quantum states of electrons to optimize light absorption. Without applying the Schrödinger equation to semiconductor lattices, these high-efficiency cells would be theoretically impossible to design."
+              },
+              {
+                "title": "Common Misconceptions & Traps",
+                "content": "A frequent trap is 'wave-particle duality' as a literal identity. It is more accurate to view particles as excitations of underlying quantum fields. Furthermore, students often mistake the collapse of the wavefunction for a physical process; in the Everettian or Decoherence view, it is a consequence of system-environment entanglement."
+              }
+            ],
+            "protocolTrace": {
+              "intent": {
+                "category": "understand_concept",
+                "confidence": 0.85,
+                "reason": "Prompt requests general conceptual elaboration."
+              },
+              "learningIntent": {
+                "intent": "Study",
+                "confidence": 1,
+                "explanation": "Reusing active session context memory intent."
+              },
+              "pipelineRouting": {
+                "pipelineId": "study",
+                "reason": "Routed to Study Pipeline (Confidence: 1) because the user's intent is identified as Study. Reasoning: undefined"
+              },
+              "routing": {
+                "providerId": "gemini",
+                "model": "gemini-3.1-flash-lite",
+                "justification": "Routing payload to GEMINI (gemini-3.1-flash-lite). Optimized for multimodal spatial contexts, fast latency, and academic structure schema."
+              },
+              "pedagogy": {
+                "style": "Socratic",
+                "bloomLevel": "Analyze & Evaluate",
+                "scaffoldingRules": [
+                  "Break explanations down into digestible, modular steps.",
+                  "Introduce a core mathematical formula only after defining its physical terms.",
+                  "End response with a Socratic question requesting validation or reflection."
+                ],
+                "injectedPrompt": "Apply Socratic pedagogy matching Bloom's level \"Analyze & Evaluate\". Ask deep, guiding questions. Prompt the student to deduce derivations rather than presenting answers instantly. Use analogical reasoning."
+              },
+              "coach": {
+                "original": "What is quantum mechanics?",
+                "enhanced": "What is quantum mechanics?\n\nExplicate for a PhD Candidate student studying General. Provide relevant real-world illustrations, prioritizing regional examples (such as infrastructure, climate, or research projects in Africa if applicable). Structure the conceptual response under Bloom's Taxonomy, beginning with clear, first-principles definitions, followed by step-by-step logical proofs, and concluding with active-recall challenges. Finally, generate 1 practice quiz exercise and 2 reflection questions testing my understanding, along with 2 recommended flashcard items in the exact JSON structure.",
+                "steps": [
+                  {
+                    "text": "What is quantum mechanics?\n\nExplicate for a PhD Candidate student studying General.",
+                    "label": "Academic Identity",
+                    "explanation": "Calibrates model's complexity, technical lexicon, and pedagogical tone to your exact academic cohort."
+                  },
+                  {
+                    "text": "What is quantum mechanics?\n\nExplicate for a PhD Candidate student studying General. Provide relevant real-world illustrations, prioritizing regional examples (such as infrastructure, climate, or research projects in Africa if applicable).",
+                    "label": "Local Context Integration",
+                    "explanation": "Grounds theoretical equations in highly contextual, familiar physical systems to enhance intuitive understanding."
+                  },
+                  {
+                    "text": "What is quantum mechanics?\n\nExplicate for a PhD Candidate student studying General. Provide relevant real-world illustrations, prioritizing regional examples (such as infrastructure, climate, or research projects in Africa if applicable). Structure the conceptual response under Bloom's Taxonomy, beginning with clear, first-principles definitions, followed by step-by-step logical proofs, and concluding with active-recall challenges.",
+                    "label": "Socratic Scaffolding",
+                    "explanation": "Forces the LLM to guide you step-by-step, preventing instant answers and encouraging active cognitive synthesis."
+                  },
+                  {
+                    "text": "What is quantum mechanics?\n\nExplicate for a PhD Candidate student studying General. Provide relevant real-world illustrations, prioritizing regional examples (such as infrastructure, climate, or research projects in Africa if applicable). Structure the conceptual response under Bloom's Taxonomy, beginning with clear, first-principles definitions, followed by step-by-step logical proofs, and concluding with active-recall challenges. Finally, generate 1 practice quiz exercise and 2 reflection questions testing my understanding, along with 2 recommended flashcard items in the exact JSON structure.",
+                    "label": "Assessment & Reflection Decks",
+                    "explanation": "Embeds diagnostic testing blocks immediately into the response to feed the Reinforcement and Mastery engines."
+                  }
+                ]
+              },
+              "curriculum": {
+                "contextSnippet": "Syllabus alignment for Stanford University (Faculty of Sciences). Focusing on core experimental foundations matching the Sciences syllabus curriculum.",
+                "localExamples": [
+                  "West African regional science consortium research guidelines"
+                ]
+              },
+              "practiceQuestion": "If a particle is in a superposition state |ψ⟩ = α|0⟩ + β|1⟩, what physical interpretation do we assign to the coefficients α and β?",
+              "reflectionQuestions": [
+                "How does the non-commutative nature of position and momentum operators (the commutator [x, p] = iħ) necessitate the existence of the uncertainty principle?",
+                "If quantum mechanics is universal, at what threshold does the classical approximation emerge, and what mathematical mechanism (decoherence) facilitates this transition?"
+              ],
+              "suggestedFlashcards": [
+                {
+                  "front": "What does the square modulus of a wavefunction |ψ(x,t)|^2 represent?",
+                  "back": "The probability density of finding a particle at position x at time t."
+                },
+                {
+                  "front": "What does the Schrödinger equation describe regarding the Hamiltonian?",
+                  "back": "It describes how the state of a quantum system evolves over time under the influence of the total energy operator (Hamiltonian)."
+                }
+              ],
+              "pictureMemoryTest": {
+                "question": "In the provided formula for quantum evolution, what does the 'H' symbol represent?",
+                "options": [
+                  "The Hilbert Constant",
+                  "The Hamiltonian Operator (Total Energy)",
+                  "The Harmonic frequency",
+                  "The Heisenberg uncertainty factor"
+                ],
+                "correctOptionIdx": 1,
+                "explanationOfCorrectAnswer": "The text explicitly defines the Hamiltonian operator, denoted as H, as the representation of the total energy of a system."
+              }
+            }
+          },
+          {
+            "id": "msg_hetck88wq",
+            "sender": "student",
+            "text": "What is quantum mechanics?",
+            "timestamp": "04:54 PM"
+          },
+          {
+            "id": "msg_u3z6btonh",
+            "sender": "mentor",
+            "text": "Quantum mechanics is the theoretical framework describing the physical properties of nature at the scale of atoms and subatomic particles, where energy is quantized and physical variables are defined by probability amplitudes rather than deterministic trajectories. It necessitates a shift from classical Newtonian mechanics to a non-commutative operator algebra in Hilbert space. Given your background in the Sciences, we analyze this transition as a move from trajectories in phase space to unitary evolution of the state vector.",
+            "timestamp": "04:55 PM",
+            "equation": "i\\hbar \\frac{\\partial}{\\partial t} |\\psi(t)\\rangle = \\hat{H} |\\psi(t)\\rangle",
+            "autoNotes": [
+              {
+                "key": "Hilbert Space",
+                "val": "A complete vector space equipped with an inner product, representing the states of a quantum system."
+              },
+              {
+                "key": "Hermitian Operator",
+                "val": "An operator equal to its conjugate transpose, ensuring real-valued eigenvalues representing measurable quantities."
+              }
+            ],
+            "progressiveParts": [
+              {
+                "title": "Core Concept & Definition",
+                "content": "Quantum mechanics posits that physical systems are defined by state vectors |ψ⟩ in Hilbert space, where measurement outcomes are eigenvalues of Hermitian operators."
+              },
+              {
+                "title": "Detailed Breakdown & Analysis",
+                "content": "The dynamics are governed by the Schrödinger equation, representing the time evolution of the state vector through the Hamiltonian operator H, which generates time translations."
+              },
+              {
+                "title": "Intuitive Analogy & Mental Model",
+                "content": "Think of a quantum system as a musical instrument where only specific harmonics (quantized energy levels) can resonate, rather than a slide whistle that can produce any frequency."
+              },
+              {
+                "title": "Practical Application Case Study",
+                "content": "Quantum sensing research at the African Institute for Mathematical Sciences (AIMS) applies quantum coherence principles to improve the sensitivity of sensors used in regional geological surveying and mineral exploration."
+              },
+              {
+                "title": "Common Misconceptions & Traps",
+                "content": "A frequent error is interpreting the wavefunction as a physical wave of matter; it is actually a mathematical probability amplitude. Avoid confusing 'superposition' with classical 'mixture' states."
+              }
+            ],
+            "protocolTrace": {
+              "intent": {
+                "category": "understand_concept",
+                "confidence": 0.85,
+                "reason": "Prompt requests general conceptual elaboration."
+              },
+              "learningIntent": {
+                "intent": "Study",
+                "confidence": 1,
+                "explanation": "Reusing active session context memory intent."
+              },
+              "pipelineRouting": {
+                "pipelineId": "study",
+                "reason": "Routed to Study Pipeline (Confidence: 1) because the user's intent is identified as Study. Reasoning: undefined"
+              },
+              "routing": {
+                "providerId": "gemini",
+                "model": "gemini-3.1-flash-lite",
+                "justification": "Routing payload to GEMINI (gemini-3.1-flash-lite). Optimized for multimodal spatial contexts, fast latency, and academic structure schema."
+              },
+              "pedagogy": {
+                "style": "Socratic",
+                "bloomLevel": "Analyze & Evaluate",
+                "scaffoldingRules": [
+                  "Break explanations down into digestible, modular steps.",
+                  "Introduce a core mathematical formula only after defining its physical terms.",
+                  "End response with a Socratic question requesting validation or reflection."
+                ],
+                "injectedPrompt": "Apply Socratic pedagogy matching Bloom's level \"Analyze & Evaluate\". Ask deep, guiding questions. Prompt the student to deduce derivations rather than presenting answers instantly. Use analogical reasoning."
+              },
+              "coach": {
+                "original": "What is quantum mechanics?",
+                "enhanced": "What is quantum mechanics?\n\nExplicate for a PhD Candidate student studying General. Provide relevant real-world illustrations, prioritizing regional examples (such as infrastructure, climate, or research projects in Africa if applicable). Structure the conceptual response under Bloom's Taxonomy, beginning with clear, first-principles definitions, followed by step-by-step logical proofs, and concluding with active-recall challenges. Finally, generate 1 practice quiz exercise and 2 reflection questions testing my understanding, along with 2 recommended flashcard items in the exact JSON structure.",
+                "steps": [
+                  {
+                    "text": "What is quantum mechanics?\n\nExplicate for a PhD Candidate student studying General.",
+                    "label": "Academic Identity",
+                    "explanation": "Calibrates model's complexity, technical lexicon, and pedagogical tone to your exact academic cohort."
+                  },
+                  {
+                    "text": "What is quantum mechanics?\n\nExplicate for a PhD Candidate student studying General. Provide relevant real-world illustrations, prioritizing regional examples (such as infrastructure, climate, or research projects in Africa if applicable).",
+                    "label": "Local Context Integration",
+                    "explanation": "Grounds theoretical equations in highly contextual, familiar physical systems to enhance intuitive understanding."
+                  },
+                  {
+                    "text": "What is quantum mechanics?\n\nExplicate for a PhD Candidate student studying General. Provide relevant real-world illustrations, prioritizing regional examples (such as infrastructure, climate, or research projects in Africa if applicable). Structure the conceptual response under Bloom's Taxonomy, beginning with clear, first-principles definitions, followed by step-by-step logical proofs, and concluding with active-recall challenges.",
+                    "label": "Socratic Scaffolding",
+                    "explanation": "Forces the LLM to guide you step-by-step, preventing instant answers and encouraging active cognitive synthesis."
+                  },
+                  {
+                    "text": "What is quantum mechanics?\n\nExplicate for a PhD Candidate student studying General. Provide relevant real-world illustrations, prioritizing regional examples (such as infrastructure, climate, or research projects in Africa if applicable). Structure the conceptual response under Bloom's Taxonomy, beginning with clear, first-principles definitions, followed by step-by-step logical proofs, and concluding with active-recall challenges. Finally, generate 1 practice quiz exercise and 2 reflection questions testing my understanding, along with 2 recommended flashcard items in the exact JSON structure.",
+                    "label": "Assessment & Reflection Decks",
+                    "explanation": "Embeds diagnostic testing blocks immediately into the response to feed the Reinforcement and Mastery engines."
+                  }
+                ]
+              },
+              "curriculum": {
+                "contextSnippet": "Syllabus alignment for Stanford University (Faculty of Sciences). Focusing on core experimental foundations matching the Sciences syllabus curriculum.",
+                "localExamples": [
+                  "West African regional science consortium research guidelines"
+                ]
+              },
+              "practiceQuestion": "If a system is in a superposition of two energy eigenstates |E1⟩ and |E2⟩, how does the measurement of energy statistically manifest in repeated identical experiments?",
+              "reflectionQuestions": [
+                "How does the non-commutativity of operators directly imply the physical phenomenon of uncertainty?",
+                "Why is the linearity of the Schrödinger equation essential for the principle of superposition to hold?"
+              ],
+              "suggestedFlashcards": [
+                {
+                  "front": "What does the Born rule define?",
+                  "back": "The Born rule defines the probability density of finding a particle at a specific location as the square of the absolute value of its wavefunction: P(x) = |ψ(x)|²."
+                },
+                {
+                  "front": "What defines a Hermitian operator in quantum mechanics?",
+                  "back": "A Hermitian operator A satisfies A = A†, which guarantees that all its eigenvalues are real, corresponding to physically measurable quantities."
+                }
+              ],
+              "pictureMemoryTest": {
+                "question": "Which specific institution was mentioned as utilizing quantum sensing for geological applications?",
+                "options": [
+                  "University of Cape Town",
+                  "African Institute for Mathematical Sciences (AIMS)",
+                  "Stanford Physics Dept",
+                  "CERN"
+                ],
+                "correctOptionIdx": 1,
+                "explanationOfCorrectAnswer": "The text explicitly mentions AIMS as the institution conducting quantum sensing research for geological surveying."
+              }
+            }
+          }
+        ],
+        "createdAt": "2026-07-26T16:52:53.822Z",
+        "currentIntent": "Study"
       }
     ],
     "630268c6-12ff-41ff-b6ef-01402d0816d0": [
@@ -544,6 +1509,38 @@
         "dueTodayCount": 0,
         "masteryPercentage": 45,
         "icon": "CompassCon"
+      },
+      {
+        "id": "coll_eigenstates_&_operators",
+        "name": "Recall Deck: Eigenstates & Operators",
+        "totalCards": 1,
+        "dueTodayCount": 1,
+        "masteryPercentage": 0,
+        "icon": "BookOpen"
+      },
+      {
+        "id": "coll_double-slit_diffraction",
+        "name": "Recall Deck: Double-Slit Diffraction",
+        "totalCards": 1,
+        "dueTodayCount": 1,
+        "masteryPercentage": 0,
+        "icon": "BookOpen"
+      },
+      {
+        "id": "coll_de_broglie_duality",
+        "name": "Recall Deck: De Broglie Duality",
+        "totalCards": 1,
+        "dueTodayCount": 1,
+        "masteryPercentage": 0,
+        "icon": "BookOpen"
+      },
+      {
+        "id": "coll_general",
+        "name": "Recall Deck: General",
+        "totalCards": 1,
+        "dueTodayCount": 1,
+        "masteryPercentage": 0,
+        "icon": "BookOpen"
       }
     ],
     "630268c6-12ff-41ff-b6ef-01402d0816d0": [
@@ -574,6 +1571,38 @@
         "back": "Δx · Δp ≥ ℏ/2. It is physically impossible to know both position and momentum with absolute precision simultaneously.",
         "difficulty": "medium",
         "box": 2
+      },
+      {
+        "id": "fc_auto_g5t9o9adp",
+        "collectionId": "coll_eigenstates_&_operators",
+        "front": "Explicate the core intellectual model and core system boundaries of Eigenstates & Operators.",
+        "back": "The primary framework of Eigenstates & Operators represents a critical node in math. Key prerequisite anchors include: Schrödinger Wavefunction.",
+        "difficulty": "easy",
+        "box": 1
+      },
+      {
+        "id": "fc_auto_wg80og7m1",
+        "collectionId": "coll_double-slit_diffraction",
+        "front": "Explicate the core intellectual model and core system boundaries of Double-Slit Diffraction.",
+        "back": "The primary framework of Double-Slit Diffraction represents a critical node in experimental. Key prerequisite anchors include: Classical Wave Physics.",
+        "difficulty": "easy",
+        "box": 1
+      },
+      {
+        "id": "fc_auto_eu92j24i6",
+        "collectionId": "coll_de_broglie_duality",
+        "front": "Explicate the core intellectual model and core system boundaries of De Broglie Duality.",
+        "back": "The primary framework of De Broglie Duality represents a critical node in quantum. Key prerequisite anchors include: Classical Wave Physics.",
+        "difficulty": "easy",
+        "box": 1
+      },
+      {
+        "id": "fc_auto_gz909x2mv",
+        "collectionId": "coll_general",
+        "front": "Explicate the core intellectual model and core system boundaries of General.",
+        "back": "The primary framework of General represents a critical node in General Science & Physics. Key prerequisite anchors include: first-principles.",
+        "difficulty": "easy",
+        "box": 1
       }
     ],
     "630268c6-12ff-41ff-b6ef-01402d0816d0": [

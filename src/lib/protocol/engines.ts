@@ -192,14 +192,14 @@ export function retrieveCurriculumContext(university: string, faculty: string, t
 // STAGE 6: AI Routing Engine
 export function routeAI(providerId: string, modelId?: string): RoutingChoice {
   const defaultModels: Record<string, string> = {
-    gemini: "gemini-3.5-flash",
+    gemini: "gemini-3.1-flash-lite",
     chatgpt: "gpt-4o",
     claude: "claude-3-5-sonnet",
     deepseek: "deepseek-v3"
   };
 
   const selectedProvider = providerId || "gemini";
-  const selectedModel = modelId || defaultModels[selectedProvider] || "gemini-3.5-flash";
+  const selectedModel = modelId || defaultModels[selectedProvider] || "gemini-3.1-flash-lite";
 
   let justification = `Routing payload to ${selectedProvider.toUpperCase()} (${selectedModel}). `;
   if (selectedProvider === "gemini") {
