@@ -1,7 +1,6 @@
 import express from "express";
 import path from "path";
 import fs from "fs";
-import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
 import { orchestrateProtocolTurn } from "./src/lib/protocol/orchestrator";
@@ -30,12 +29,21 @@ dotenv.config();
 const app = express();
 const PORT = 3000;
 const IS_VERCEL = Boolean(process.env.VERCEL);
-const DATA_FILE = IS_VERCEL
+const IS_NETLIFY = Boolean(process.env.NETLIFY);
+const DATA_FILE = IS_VERCEL || IS_NETLIFY
   ? path.join("/tmp", "data.json")
   : path.join(process.cwd(), "data.json");
 
 // Parse request bodies
 app.use(express.json({ limit: "10mb" }));
+
+// Normalize URL for Vercel/Netlify serverless function routing if /api prefix was stripped
+app.use((req, res, next) => {
+  if ((IS_VERCEL || IS_NETLIFY) && !req.url.startsWith("/api/")) {
+    req.url = "/api" + (req.url.startsWith("/") ? "" : "/") + req.url;
+  }
+  next();
+});
 
 // Initialize Gemini Client safely
 let ai: GoogleGenAI | null = null;
@@ -2164,14 +2172,24 @@ When grading university scripts on **${topic}**, examiners look closely at your 
   }
 });
 
+// Global Express Error Handler
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error("Global Express API error:", err);
+  if (res.headersSent) {
+    return next(err);
+  }
+  res.status(500).json({ error: err?.message || "An internal server error occurred" });
+});
+
 // Vite middleware / Production routing setup
 async function startServer() {
-  if (IS_VERCEL) {
-    // Vercel serverless functions handle request routing automatically
+  if (IS_VERCEL || IS_NETLIFY) {
+    // Serverless functions handle request routing automatically
     return;
   }
 
   if (process.env.NODE_ENV !== "production") {
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",

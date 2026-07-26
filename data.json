@@ -32,135 +32,220 @@
           {
             "id": "wave_fn",
             "label": "Schrödinger Wavefunction",
-            "group": "quantum",
-            "val": 12,
-            "mastery": 85,
-            "x": 150,
-            "y": 120,
-            "vx": 0,
-            "vy": 0,
-            "radius": 28,
-            "category": "Wave Mechanics",
-            "desc": "A mathematical description of the quantum state of an isolated physical system.",
-            "prereqs": [
+            "canonicalName": "Schrödinger Wavefunction",
+            "aliases": [
+              "Schrödinger Wavefunction"
+            ],
+            "definition": "A mathematical description of the quantum state of an isolated physical system.",
+            "contexts": [
+              "quantum"
+            ],
+            "difficulty": "medium",
+            "examples": [],
+            "equations": [],
+            "prerequisites": [
               "Complex Numbers",
               "Classical Wave Physics"
             ],
+            "relatedConcepts": [],
+            "mastery": 85,
+            "sourceConversations": [],
+            "learningSessions": [],
+            "group": "quantum",
             "confidenceScore": 85,
-            "state": "Confident",
             "timesStudied": 1,
             "timesReviewed": 1,
-            "lastStudiedDate": "2026-07-18T14:20:44.192Z"
+            "reflectionScores": [],
+            "practiceScores": [],
+            "lastStudiedDate": "2026-07-18T14:20:44.192Z",
+            "state": "Confident",
+            "prerequisiteConcepts": [
+              "Complex Numbers",
+              "Classical Wave Physics"
+            ],
+            "recommendedNextConcepts": [],
+            "recentActivity": false,
+            "ringProgress": 85
           },
           {
             "id": "heis_unc",
             "label": "Heisenberg Uncertainty Principle",
-            "group": "quantum",
-            "val": 8,
-            "mastery": 72,
-            "x": 350,
-            "y": 180,
-            "vx": 0,
-            "vy": 0,
-            "radius": 24,
-            "category": "Quantum Principles",
-            "desc": "Asserts a fundamental limit to the precision with which certain pairs of physical properties can be known.",
-            "prereqs": [
+            "canonicalName": "Heisenberg Uncertainty Principle",
+            "aliases": [
+              "Heisenberg Uncertainty Principle"
+            ],
+            "definition": "Asserts a fundamental limit to the precision with which certain pairs of physical properties can be known.",
+            "contexts": [
+              "quantum"
+            ],
+            "difficulty": "medium",
+            "examples": [],
+            "equations": [],
+            "prerequisites": [
               "Schrödinger Wavefunction"
             ],
+            "relatedConcepts": [],
+            "mastery": 72,
+            "sourceConversations": [],
+            "learningSessions": [],
+            "group": "quantum",
             "confidenceScore": 72,
-            "state": "Confident",
             "timesStudied": 1,
             "timesReviewed": 1,
-            "lastStudiedDate": "2026-07-18T14:20:44.192Z"
+            "reflectionScores": [],
+            "practiceScores": [],
+            "lastStudiedDate": "2026-07-18T14:20:44.192Z",
+            "state": "Confident",
+            "prerequisiteConcepts": [
+              "Schrödinger Wavefunction"
+            ],
+            "recommendedNextConcepts": [],
+            "recentActivity": false,
+            "ringProgress": 72
           },
           {
             "id": "eigen",
             "label": "Eigenstates & Operators",
-            "group": "math",
-            "val": 10,
-            "mastery": 50,
-            "x": 220,
-            "y": 320,
-            "vx": 0,
-            "vy": 0,
-            "radius": 26,
-            "category": "Mathematical Setup",
-            "desc": "Represent physical observables as linear operators acting on Hilbert space vectors.",
-            "prereqs": [
+            "canonicalName": "Eigenstates & Operators",
+            "aliases": [
+              "Eigenstates & Operators"
+            ],
+            "definition": "Represent physical observables as linear operators acting on Hilbert space vectors.",
+            "contexts": [
+              "math"
+            ],
+            "difficulty": "medium",
+            "examples": [],
+            "equations": [],
+            "prerequisites": [
               "Schrödinger Wavefunction"
             ],
+            "relatedConcepts": [],
+            "mastery": 50,
+            "sourceConversations": [],
+            "learningSessions": [],
+            "group": "math",
             "confidenceScore": 50,
-            "state": "Practicing",
             "timesStudied": 1,
             "timesReviewed": 1,
-            "lastStudiedDate": "2026-07-18T14:20:44.192Z"
+            "reflectionScores": [],
+            "practiceScores": [],
+            "lastStudiedDate": "2026-07-18T14:20:44.192Z",
+            "state": "Practicing",
+            "prerequisiteConcepts": [
+              "Schrödinger Wavefunction"
+            ],
+            "recommendedNextConcepts": [],
+            "recentActivity": false,
+            "ringProgress": 50
           },
           {
             "id": "diffract",
             "label": "Double-Slit Diffraction",
-            "group": "experimental",
-            "val": 6,
-            "mastery": 95,
-            "x": 480,
-            "y": 100,
-            "vx": 0,
-            "vy": 0,
-            "radius": 20,
-            "category": "Physical Experiments",
-            "desc": "The classic demonstration of quantum wave-particle superposition and interference patterns.",
-            "prereqs": [
+            "canonicalName": "Double-Slit Diffraction",
+            "aliases": [
+              "Double-Slit Diffraction"
+            ],
+            "definition": "The classic demonstration of quantum wave-particle superposition and interference patterns.",
+            "contexts": [
+              "experimental"
+            ],
+            "difficulty": "medium",
+            "examples": [],
+            "equations": [],
+            "prerequisites": [
               "Classical Wave Physics"
             ],
+            "relatedConcepts": [],
+            "mastery": 95,
+            "sourceConversations": [],
+            "learningSessions": [],
+            "group": "experimental",
             "confidenceScore": 95,
-            "state": "Mastered",
             "timesStudied": 1,
             "timesReviewed": 1,
-            "lastStudiedDate": "2026-07-18T14:20:44.192Z"
+            "reflectionScores": [],
+            "practiceScores": [],
+            "lastStudiedDate": "2026-07-18T14:20:44.192Z",
+            "state": "Mastered",
+            "prerequisiteConcepts": [
+              "Classical Wave Physics"
+            ],
+            "recommendedNextConcepts": [],
+            "recentActivity": false,
+            "ringProgress": 95
           },
           {
             "id": "debroglie",
             "label": "De Broglie Duality",
-            "group": "quantum",
-            "val": 7,
-            "mastery": 90,
-            "x": 520,
-            "y": 280,
-            "vx": 0,
-            "vy": 0,
-            "radius": 22,
-            "category": "Wave Mechanics",
-            "desc": "Formulates that any moving particle has an associated wave character with λ = h/p.",
-            "prereqs": [
+            "canonicalName": "De Broglie Duality",
+            "aliases": [
+              "De Broglie Duality"
+            ],
+            "definition": "Formulates that any moving particle has an associated wave character with λ = h/p.",
+            "contexts": [
+              "quantum"
+            ],
+            "difficulty": "medium",
+            "examples": [],
+            "equations": [],
+            "prerequisites": [
               "Classical Wave Physics"
             ],
+            "relatedConcepts": [],
+            "mastery": 90,
+            "sourceConversations": [],
+            "learningSessions": [],
+            "group": "quantum",
             "confidenceScore": 90,
-            "state": "Mastered",
             "timesStudied": 1,
             "timesReviewed": 1,
-            "lastStudiedDate": "2026-07-18T14:20:44.192Z"
+            "reflectionScores": [],
+            "practiceScores": [],
+            "lastStudiedDate": "2026-07-18T14:20:44.192Z",
+            "state": "Mastered",
+            "prerequisiteConcepts": [
+              "Classical Wave Physics"
+            ],
+            "recommendedNextConcepts": [],
+            "recentActivity": false,
+            "ringProgress": 90
           },
           {
             "id": "hilbert",
             "label": "Hilbert Space Formulations",
-            "group": "math",
-            "val": 5,
-            "mastery": 35,
-            "x": 100,
-            "y": 250,
-            "vx": 0,
-            "vy": 0,
-            "radius": 18,
-            "category": "Mathematical Setup",
-            "desc": "An abstract vector space possessing the structure of an inner product that allows length and angle measurement.",
-            "prereqs": [
+            "canonicalName": "Hilbert Space Formulations",
+            "aliases": [
+              "Hilbert Space Formulations"
+            ],
+            "definition": "An abstract vector space possessing the structure of an inner product that allows length and angle measurement.",
+            "contexts": [
+              "math"
+            ],
+            "difficulty": "medium",
+            "examples": [],
+            "equations": [],
+            "prerequisites": [
               "Eigenstates & Operators"
             ],
+            "relatedConcepts": [],
+            "mastery": 35,
+            "sourceConversations": [],
+            "learningSessions": [],
+            "group": "math",
             "confidenceScore": 35,
-            "state": "Learning",
             "timesStudied": 1,
             "timesReviewed": 1,
-            "lastStudiedDate": "2026-07-18T14:20:44.192Z"
+            "reflectionScores": [],
+            "practiceScores": [],
+            "lastStudiedDate": "2026-07-18T14:20:44.192Z",
+            "state": "Needs Revision",
+            "prerequisiteConcepts": [
+              "Eigenstates & Operators"
+            ],
+            "recommendedNextConcepts": [],
+            "recentActivity": false,
+            "ringProgress": 35
           }
         ],
         "links": [
@@ -248,6 +333,33 @@
           ]
         }
       ]
+    },
+    "test123456789@example.com": {
+      "id": "630268c6-12ff-41ff-b6ef-01402d0816d0",
+      "fullName": "test",
+      "email": "test123456789@example.com",
+      "country": "United States",
+      "university": "Stanford University",
+      "faculty": "Sciences",
+      "department": "Physics",
+      "academicLevel": "PhD Candidate",
+      "preferredLanguage": "English",
+      "learningStyle": "Visual",
+      "weeklyCommitment": "5-10",
+      "learningObjectives": "",
+      "masteryProgress": 0,
+      "learningStreak": 1,
+      "cardsMastered": 0,
+      "totalCards": 0,
+      "preferences": {
+        "theme": "obsidian",
+        "accentColor": "blue",
+        "fontSize": "100%",
+        "teachingStyle": "Socratic",
+        "cognitiveLoad": "Proficient",
+        "taxonomyFocus": "Analyze & Evaluate",
+        "contextAwareness": true
+      }
     }
   },
   "sessions": {
@@ -363,6 +475,40 @@
           }
         ]
       }
+    ],
+    "630268c6-12ff-41ff-b6ef-01402d0816d0": [
+      {
+        "id": "sess_intro_1",
+        "title": "Session: Modern Quantum Principles",
+        "focus": "Quantum Mechanics",
+        "difficulty": "Advanced",
+        "bloomLevel": "Analyze",
+        "strategy": "Socratic",
+        "progress": 10,
+        "prerequisites": [
+          {
+            "name": "Introductory Wave Equations",
+            "completed": true
+          },
+          {
+            "name": "Multivariable Calculus",
+            "completed": false
+          }
+        ],
+        "outline": [
+          "Wave packets",
+          "Superposition",
+          "Eigenstates"
+        ],
+        "messages": [
+          {
+            "id": "msg_new_1",
+            "sender": "mentor",
+            "text": "Welcome to Epselon, test. Let's initialize your neural pathways. Ask me any conceptual question to begin.",
+            "timestamp": "Now"
+          }
+        ]
+      }
     ]
   },
   "collections": {
@@ -399,6 +545,16 @@
         "masteryPercentage": 45,
         "icon": "CompassCon"
       }
+    ],
+    "630268c6-12ff-41ff-b6ef-01402d0816d0": [
+      {
+        "id": "coll_630268c6-12ff-41ff-b6ef-01402d0816d0_1",
+        "name": "Core Science Fundamentals",
+        "totalCards": 12,
+        "dueTodayCount": 5,
+        "masteryPercentage": 0,
+        "icon": "FlaskCon"
+      }
     ]
   },
   "flashcards": {
@@ -418,6 +574,16 @@
         "back": "Δx · Δp ≥ ℏ/2. It is physically impossible to know both position and momentum with absolute precision simultaneously.",
         "difficulty": "medium",
         "box": 2
+      }
+    ],
+    "630268c6-12ff-41ff-b6ef-01402d0816d0": [
+      {
+        "id": "fc_new_1",
+        "collectionId": "coll_630268c6-12ff-41ff-b6ef-01402d0816d0_1",
+        "front": "What is the Schrödinger Equation?",
+        "back": "A linear partial differential equation that governs the wave function of a quantum-mechanical system.",
+        "difficulty": "medium",
+        "box": 1
       }
     ]
   }
