@@ -679,12 +679,14 @@ app.post("/api/auth/register", async (req, res) => {
       
     if (supabase) {
       try {
-        // 1. Create user in Supabase Auth with email_confirm: false so verification is strictly required!
-        const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        // 1. Create user in Supabase Auth using standard signUp so verification is strictly required!
+        // This naturally triggers the confirmation email if Email Confirmations are enabled in Supabase.
+        const { data: authData, error: authError } = await supabase.auth.signUp({
           email,
           password,
-          email_confirm: false,
-          user_metadata: { full_name: fullName }
+          options: {
+            data: { full_name: fullName }
+          }
         });
 
         if (authError) {
@@ -693,17 +695,7 @@ app.post("/api/auth/register", async (req, res) => {
 
         if (authData?.user) {
           userId = authData.user.id;
-          requiresVerification = true;
-        }
-
-        // Trigger verification email resend/send via Supabase
-        try {
-          await supabase.auth.resend({
-            type: "signup",
-            email
-          });
-        } catch (e) {
-          console.warn("Resend email notification trigger notice:", e);
+          requiresVerification = true; // Supabase sends the email automatically
         }
 
         // 2. Insert into public.users
