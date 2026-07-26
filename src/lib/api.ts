@@ -2,6 +2,19 @@ import { UserProfile, UserPreferences, ProviderConnection, StudySession, ChatMes
 
 const API_BASE = ""; // Relative routes since we're using Vite's server proxy
 
+const apiFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+  const userId = typeof localStorage !== "undefined" ? localStorage.getItem("activeSessionUserId") : null;
+  if (userId && typeof input === "string" && input.startsWith(API_BASE + "/api/")) {
+    init = init || {};
+    init.headers = {
+      ...init.headers,
+      "x-user-id": userId
+    };
+  }
+  return fetch(input, init);
+};
+
+
 async function parseApiResponse<T = any>(res: Response, defaultErrorMsg: string): Promise<T> {
   const contentType = res.headers.get("content-type") || "";
   let data: any = {};
@@ -30,7 +43,7 @@ async function parseApiResponse<T = any>(res: Response, defaultErrorMsg: string)
 
 export async function fetchSession(): Promise<UserProfile | null> {
   try {
-    const res = await fetch(`${API_BASE}/api/auth/session`);
+    const res = await apiFetch(`${API_BASE}/api/auth/session`);
     if (!res.ok) return null;
     const data = await parseApiResponse(res, "Failed to fetch session");
     return data.user || null;
@@ -47,7 +60,7 @@ export interface AuthResponse {
 }
 
 export async function loginUser(email: string, password: string): Promise<AuthResponse> {
-  const res = await fetch(`${API_BASE}/api/auth/login`, {
+  const res = await apiFetch(`${API_BASE}/api/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
@@ -56,7 +69,7 @@ export async function loginUser(email: string, password: string): Promise<AuthRe
 }
 
 export async function registerUser(payload: Partial<UserProfile> & { password?: string }): Promise<AuthResponse> {
-  const res = await fetch(`${API_BASE}/api/auth/register`, {
+  const res = await apiFetch(`${API_BASE}/api/auth/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -65,7 +78,7 @@ export async function registerUser(payload: Partial<UserProfile> & { password?: 
 }
 
 export async function resendVerificationEmail(email: string): Promise<{ message: string }> {
-  const res = await fetch(`${API_BASE}/api/auth/resend-verification`, {
+  const res = await apiFetch(`${API_BASE}/api/auth/resend-verification`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email }),
@@ -74,11 +87,11 @@ export async function resendVerificationEmail(email: string): Promise<{ message:
 }
 
 export async function logoutUser(): Promise<void> {
-  await fetch(`${API_BASE}/api/auth/logout`, { method: "POST" });
+  await apiFetch(`${API_BASE}/api/auth/logout`, { method: "POST" });
 }
 
 export async function saveOnboarding(payload: Partial<UserProfile>): Promise<UserProfile> {
-  const res = await fetch(`${API_BASE}/api/auth/onboard`, {
+  const res = await apiFetch(`${API_BASE}/api/auth/onboard`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -88,7 +101,7 @@ export async function saveOnboarding(payload: Partial<UserProfile>): Promise<Use
 }
 
 export async function updatePreferences(prefs: Partial<UserPreferences>): Promise<UserPreferences> {
-  const res = await fetch(`${API_BASE}/api/user/preferences`, {
+  const res = await apiFetch(`${API_BASE}/api/user/preferences`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(prefs),
@@ -98,7 +111,7 @@ export async function updatePreferences(prefs: Partial<UserPreferences>): Promis
 }
 
 export async function updateProviders(providers: ProviderConnection[]): Promise<{ providers: ProviderConnection[], user: UserProfile }> {
-  const res = await fetch(`${API_BASE}/api/user/providers`, {
+  const res = await apiFetch(`${API_BASE}/api/user/providers`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ providers }),
@@ -107,13 +120,13 @@ export async function updateProviders(providers: ProviderConnection[]): Promise<
 }
 
 export async function fetchStudySessions(): Promise<StudySession[]> {
-  const res = await fetch(`${API_BASE}/api/study/sessions`);
+  const res = await apiFetch(`${API_BASE}/api/study/sessions`);
   const data = await parseApiResponse<{ sessions: StudySession[] }>(res, "Failed to fetch sessions");
   return data.sessions || [];
 }
 
 export async function createStudySession(title: string, focus: string, difficulty: string): Promise<StudySession> {
-  const res = await fetch(`${API_BASE}/api/study/sessions/create`, {
+  const res = await apiFetch(`${API_BASE}/api/study/sessions/create`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ title, focus, difficulty }),
@@ -123,7 +136,7 @@ export async function createStudySession(title: string, focus: string, difficult
 }
 
 export async function sendChatMessage(sessionId: string, messageText: string, isConversational?: boolean): Promise<StudySession> {
-  const res = await fetch(`${API_BASE}/api/study/chat`, {
+  const res = await apiFetch(`${API_BASE}/api/study/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ sessionId, messageText, isConversational }),
@@ -139,7 +152,7 @@ export async function enhancePrompt(originalPrompt: string, topic: string, sessi
   summary?: any;
   ecePacket?: any;
 }> {
-  const res = await fetch(`${API_BASE}/api/study/enhance-prompt`, {
+  const res = await apiFetch(`${API_BASE}/api/study/enhance-prompt`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ originalPrompt, topic, sessionId }),
@@ -155,7 +168,7 @@ export async function enhancePrompt(originalPrompt: string, topic: string, sessi
 }
 
 export async function clearStudySession(sessionId: string): Promise<StudySession> {
-  const res = await fetch(`${API_BASE}/api/study/sessions/clear`, {
+  const res = await apiFetch(`${API_BASE}/api/study/sessions/clear`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ sessionId }),
@@ -165,7 +178,7 @@ export async function clearStudySession(sessionId: string): Promise<StudySession
 }
 
 export async function updateSessionIntent(sessionId: string, intent: string): Promise<StudySession> {
-  const res = await fetch(`${API_BASE}/api/study/sessions/update-intent`, {
+  const res = await apiFetch(`${API_BASE}/api/study/sessions/update-intent`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ sessionId, intent }),
@@ -175,12 +188,12 @@ export async function updateSessionIntent(sessionId: string, intent: string): Pr
 }
 
 export async function fetchFlashcards(): Promise<{ collections: FlashcardCollection[]; flashcards: Flashcard[] }> {
-  const res = await fetch(`${API_BASE}/api/flashcards`);
+  const res = await apiFetch(`${API_BASE}/api/flashcards`);
   return parseApiResponse<{ collections: FlashcardCollection[]; flashcards: Flashcard[] }>(res, "Failed to fetch flashcards");
 }
 
 export async function submitCardReview(cardId: string, result: "easy" | "medium" | "hard"): Promise<void> {
-  const res = await fetch(`${API_BASE}/api/flashcards/review`, {
+  const res = await apiFetch(`${API_BASE}/api/flashcards/review`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ cardId, result }),
@@ -198,7 +211,7 @@ export async function updateUserProfile(payload: {
   weeklyCommitment: string;
   learningObjectives: string;
 }): Promise<{ success: boolean; user: UserProfile }> {
-  const res = await fetch(`${API_BASE}/api/user/profile`, {
+  const res = await apiFetch(`${API_BASE}/api/user/profile`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),

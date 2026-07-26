@@ -47,7 +47,7 @@ export default function App() {
       try {
         const sessionUser = await fetchSession();
         if (sessionUser) {
-          setUser(sessionUser);
+          setUser(sessionUser); localStorage.setItem('activeSessionUserId', sessionUser.id);
           await loadAcademicData();
         }
       } catch (err) {
@@ -87,7 +87,7 @@ export default function App() {
   };
 
   const handleAuthSuccess = async (authenticatedUser: UserProfile) => {
-    setUser(authenticatedUser);
+    setUser(authenticatedUser); localStorage.setItem('activeSessionUserId', authenticatedUser.id);
     setCurrentRoute("settings");
     try {
       await loadAcademicData();
@@ -99,7 +99,7 @@ export default function App() {
   const handleLogout = async () => {
     try {
       await logoutUser();
-      setUser(null);
+      setUser(null); localStorage.removeItem('activeSessionUserId');
       setCurrentRoute("nexus");
     } catch (err) {
       console.error("Logout failed", err);

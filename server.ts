@@ -37,6 +37,53 @@ const DATA_FILE = IS_VERCEL || IS_NETLIFY
 // Parse request bodies
 app.use(express.json({ limit: "10mb" }));
 
+app.use(async (req, res, next) => {
+  const userId = req.headers["x-user-id"];
+  if (userId) {
+    activeSessionUserId = userId;
+    
+    // If the local in-memory DB is empty (due to cold start) and we have supabase
+    if (!Object.values(db.users).find((u) => u.id === userId) && supabase) {
+      try {
+        const { data, error } = await supabase.from("users").select("*").eq("id", userId).single();
+        if (data) {
+          const loadedUser = {
+            id: data.id,
+            email: data.email,
+            fullName: data.full_name,
+            country: data.country || "United States",
+            university: data.university || "Stanford University",
+            faculty: data.faculty || "Sciences",
+            department: data.department || "Physics",
+            academicLevel: data.academic_level || "PhD Candidate",
+            preferredLanguage: data.preferred_language || "English",
+            learningStyle: data.learning_style || "Visual",
+            weeklyCommitment: data.weekly_commitment || "5-10",
+            learningObjectives: data.learning_objectives || "",
+            masteryProgress: data.mastery_progress || 0,
+            learningStreak: data.learning_streak || 1,
+            cardsMastered: data.cards_mastered || 0,
+            totalCards: data.total_cards || 0,
+            preferences: data.preferences || {},
+            providers: data.providers || []
+          };
+          db.users[data.email] = loadedUser;
+          
+          if (data.preferences && data.preferences._appState) {
+            db.sessions[userId] = data.preferences._appState.sessions || [];
+            db.flashcards[userId] = data.preferences._appState.flashcards || [];
+            db.collections[userId] = data.preferences._appState.collections || [];
+          }
+        }
+      } catch (err) {
+        console.error("Failed to restore state from Supabase:", err);
+      }
+    }
+  }
+  next();
+});
+
+
 // Normalize URL for Vercel/Netlify serverless function routing if /api prefix was stripped
 app.use((req, res, next) => {
   if ((IS_VERCEL || IS_NETLIFY) && !req.url.startsWith("/api/")) {
@@ -434,6 +481,22 @@ function saveDb() {
     fs.writeFileSync(DATA_FILE, JSON.stringify(db, null, 2), "utf-8");
   } catch (err) {
     console.warn("Could not persist database file (non-fatal, e.g. read-only filesystem); keeping in memory.", err);
+  }
+  
+  if (supabase && activeSessionUserId) {
+    const user = Object.values(db.users).find(u => u.id === activeSessionUserId);
+    if (user) {
+      supabase.from("users").update({
+        preferences: {
+          ...user.preferences,
+          _appState: {
+            sessions: db.sessions[activeSessionUserId] || [],
+            flashcards: db.flashcards[activeSessionUserId] || [],
+            collections: db.collections[activeSessionUserId] || []
+          }
+        }
+      }).eq("id", activeSessionUserId).then(() => {}).catch(() => {});
+    }
   }
 }
 
@@ -983,7 +1046,9 @@ app.post("/api/auth/onboard", (req, res) => {
     return res.status(401).json({ error: "No active session" });
   }
   const { university, faculty, learningStyle, weeklyCommitment, learningObjectives } = req.body;
-  const user = Object.values(db.users).find((u) => u.id === activeSessionUserId);
+  
+const user = Object.values(db.users).find((u) => u.id === activeSessionUserId);
+
   if (!user) {
     return res.status(404).json({ error: "User not found" });
   }
@@ -1476,9 +1541,53 @@ app.post("/api/study/chat", async (req, res) => {
     return res.status(400).json({ error: "Missing sessionId or messageText" });
   }
 
-  const user = Object.values(db.users).find((u) => u.id === activeSessionUserId);
+  let user = Object.values(db.users).find((u) => u.id === activeSessionUserId);
+  
+  if (!user && activeSessionUserId) {
+    console.warn("User not found in local db, attempting to fallback build a user for session", activeSessionUserId);
+    user = {
+      id: activeSessionUserId,
+      email: "unknown@example.com",
+      fullName: "Guest Student",
+      country: "United States",
+      university: "Unknown",
+      faculty: "Sciences",
+      department: "Physics",
+      academicLevel: "Undergraduate",
+      preferredLanguage: "English",
+      learningStyle: "Visual",
+      weeklyCommitment: "5-10",
+      learningObjectives: "",
+      masteryProgress: 0,
+      learningStreak: 1,
+      cardsMastered: 0,
+      totalCards: 0,
+      preferences: {},
+      providers: []
+    };
+    db.users["unknown_" + activeSessionUserId] = user;
+  }
+
   const userSessions = db.sessions[activeSessionUserId] || [];
-  const session = userSessions.find((s) => s.id === sessionId);
+  let session = userSessions.find((s) => s.id === sessionId);
+
+  if (!session && user) {
+    session = {
+      id: sessionId,
+      title: "Recovered Session",
+      focus: "General",
+      difficulty: "Intermediate",
+      bloomLevel: "Understand",
+      strategy: "Socratic",
+      progress: 0,
+      prerequisites: [],
+      outline: [],
+      messages: [],
+      createdAt: new Date().toISOString()
+    };
+    if (!db.sessions[activeSessionUserId]) db.sessions[activeSessionUserId] = [];
+    db.sessions[activeSessionUserId].push(session);
+  }
 
   if (!session || !user) {
     return res.status(404).json({ error: "Session or user not found" });
@@ -1546,6 +1655,13 @@ app.post("/api/study/chat", async (req, res) => {
   let reflectionQuestions: string[] = [];
   let suggestedFlashcards: Array<{ front: string; back: string }> = [];
   let pictureMemoryTest: any = undefined;
+
+  // If the API key is completely missing, explicitly throw a configuration error.
+  if (!process.env.GEMINI_API_KEY) {
+    return res.status(503).json({ 
+      error: "Configuration Error: GEMINI_API_KEY environment variable is missing. Please configure it in the platform settings to enable AI features." 
+    });
+  }
 
   // Call Gemini API using our dynamically composed, optimized enhanced prompt (Prompt Coach Stage)
   if (ai) {
