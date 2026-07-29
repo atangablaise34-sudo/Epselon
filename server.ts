@@ -7,6 +7,7 @@ import { orchestrateProtocolTurn } from "./src/lib/protocol/orchestrator";
 import { LearningIntentEngine } from "./src/lib/protocol/learningIntentEngine";
 import { PipelineRouter } from "./src/lib/protocol/pipelineRouter";
 import { EducationalContextEngine } from "./src/lib/protocol/educationalContextEngine";
+import { buildStudentContext, detectIntent, coachPrompt } from "./src/lib/protocol/engines";
 import {
   triggerLessonCompletion,
   triggerReflectionCompletion,
@@ -1548,9 +1549,16 @@ app.post("/api/study/enhance-prompt", async (req, res) => {
 
     const isConversational = ecePacket.analysis.isCasual;
 
+    const studentContext = buildStudentContext(user, topic || session?.focus || "General Discipline");
+    const intentData = detectIntent(originalPrompt);
+    const learningIntentData = { intent: "Study" as const, confidence: 0.95, reasoning: "Study mode active" };
+    const coachResult = coachPrompt(originalPrompt, studentContext, intentData, learningIntentData);
+
+    const enhancedPrompt = isConversational ? originalPrompt : (coachResult.enhanced || originalPrompt);
+
     return res.json({
       originalPrompt: ecePacket.originalPrompt,
-      enhancedPrompt: ecePacket.originalPrompt, // Preserve student's words 100%
+      enhancedPrompt: enhancedPrompt,
       contextPacket: ecePacket.composedSystemPrompt,
       summary: ecePacket.summary,
       ecePacket: ecePacket,

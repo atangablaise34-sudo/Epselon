@@ -17,6 +17,7 @@ import LearningCanvasView from "./LearningCanvasView";
 import FocusModeOverlay from "../../components/FocusModeOverlay";
 import { EventBus } from "../../lib/EventBus";
 import { EducationalContextEngine, EducationalContextPacket } from "../../lib/protocol/educationalContextEngine";
+import { buildStudentContext, detectIntent, coachPrompt } from "../../lib/protocol/engines";
 import EducationalContextDetailsModal from "../../components/EducationalContextDetailsModal";
 import { AdaptiveLearningAssessmentEngine } from "../../lib/protocol/adaptiveAssessmentEngine";
 import TeacherLensOverlay from "./TeacherLensOverlay";
@@ -876,6 +877,14 @@ export default function StudySessionView({
 
     setActiveEcePacket(packet);
 
+    // Build local coach prompt enhancement
+    const studentContext = buildStudentContext(user, focusTopic);
+    const intentData = detectIntent(original.trim());
+    const learningIntentData = { intent: "Study" as const, confidence: 0.95, reasoning: "Study mode active" };
+    const coachResult = coachPrompt(original.trim(), studentContext, intentData, learningIntentData);
+
+    let enhancedFinalText = coachResult.enhanced || original.trim();
+
     // Step-by-step indicator progression for context assembly
     let stepCount = 0;
     const stepInterval = setInterval(() => {
@@ -894,6 +903,9 @@ export default function StudySessionView({
         if (data.ecePacket) {
           setActiveEcePacket(data.ecePacket);
         }
+        if (data.enhancedPrompt && data.enhancedPrompt !== original.trim()) {
+          enhancedFinalText = data.enhancedPrompt;
+        }
       }
     } catch (err) {
       console.warn("Using local ECE packet assembly:", err);
@@ -908,8 +920,8 @@ export default function StudySessionView({
       return;
     }
 
-    // Preserve student prompt 100% intact
-    setInputText(original);
+    // Populate input field with the final enhanced prompt so the user can see what has been added
+    setInputText(enhancedFinalText);
     EventBus.publish("PROMPT_REFINEMENT_COMPLETED");
     setTimeout(() => {
       setFlowState('show_card');
