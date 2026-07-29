@@ -30,7 +30,9 @@ type AppEvent =
   | "voice_partial"
   | "voice_completed"
   | "speech_started"
-  | "speech_cancelled";
+  | "speech_cancelled"
+  | "VAULT_UPDATED"
+  | "IMPORT_NOTIFICATION";
 
 type EventCallback = (payload?: any) => void;
 
@@ -60,3 +62,4 @@ class MentorLayerEventBus {
 }
 
 export const EventBus = new MentorLayerEventBus();
+export default EventBus;

@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { 
   Network, Brain, Layers, Settings2, LogOut, 
   Menu, X, Sparkles, Cpu, Compass, User, RefreshCw,
-  Sun, Moon
+  Sun, Moon, FolderUp, CheckCircle2, Database
 } from "lucide-react";
 import { UserProfile, StudySession, FlashcardCollection, Flashcard } from "./types";
 import { fetchSession, fetchStudySessions, fetchFlashcards, logoutUser, updatePreferences } from "./lib/api";
@@ -20,6 +20,9 @@ import RadialPulseLoader from "../components/ui/loading-animation";
 import WorkspaceMascot from "./components/WorkspaceMascot";
 import GraphWatermark from "./components/GraphWatermark";
 import { useFocusMode } from "./context/FocusModeContext";
+import vaultService from "./lib/vaultService";
+import EventBus from "./lib/EventBus";
+import VaultImportModal from "./components/VaultImportModal";
 
 export default function App() {
   const [showSplash, setShowSplash] = useState(true);
@@ -27,7 +30,6 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const { isFocusMode } = useFocusMode();
 
-  
   // Navigation
   const [currentRoute, setCurrentRoute] = useState<"workspace" | "nexus" | "flashcards" | "settings">("settings");
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
@@ -37,40 +39,96 @@ export default function App() {
   const [collections, setCollections] = useState<FlashcardCollection[]>([]);
   const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
 
+  // Vault Import Modal & Notification State
+  const [isVaultImportOpen, setIsVaultImportOpen] = useState(false);
+  const [vaultNotification, setVaultNotification] = useState<{ message: string; sub?: string } | null>(null);
+
   // Mobile sidebar state
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [passedTopicFromNexus, setPassedTopicFromNexus] = useState<string | undefined>(undefined);
 
-  // 1. Initial Authentication Check
+  // 1. Initial Authentication & Vault Initialization Check
   useEffect(() => {
-    async function checkAuth() {
+    async function checkAuthAndVault() {
       try {
+        // Startup Order PART 4: Initialize Vault FIRST
+        const { sessionsCount, nodesCount } = await vaultService.initializeVault();
+
         const sessionUser = await fetchSession();
         if (sessionUser) {
-          setUser(sessionUser); localStorage.setItem('activeSessionUserId', sessionUser.id);
+          setUser(sessionUser);
+          localStorage.setItem('activeSessionUserId', sessionUser.id);
           await loadAcademicData();
+        } else {
+          // If offline or no auth yet, load vault sessions
+          const localVaultSessions = vaultService.getAllSessions();
+          if (localVaultSessions.length > 0) {
+            setSessions(localVaultSessions);
+          }
         }
       } catch (err) {
         console.error("Auth check failed", err);
+        // Fallback to local vault
+        const localVaultSessions = vaultService.getAllSessions();
+        if (localVaultSessions.length > 0) {
+          setSessions(localVaultSessions);
+        }
       } finally {
         setLoading(false);
       }
     }
     
-    checkAuth();
+    checkAuthAndVault();
+
+    // Subscribe to Vault Update Events
+    const unsubscribeVault = EventBus.subscribe("VAULT_UPDATED", () => {
+      const allVaultSessions = vaultService.getAllSessions();
+      setSessions((prev) => {
+        const map = new Map<string, StudySession>();
+        prev.forEach((s) => map.set(s.id, s));
+        allVaultSessions.forEach((s) => map.set(s.id, s));
+        return Array.from(map.values());
+      });
+    });
+
+    const unsubscribeNotice = EventBus.subscribe("IMPORT_NOTIFICATION", (data: any) => {
+      const nodes = vaultService.getKnowledgeGraphNodes();
+      setVaultNotification({
+        message: data.message || "Imported Study Session",
+        sub: `Reconstructed ${allSessionsCount} Sessions • ${nodes.length} Graph Connections`,
+      });
+      setTimeout(() => setVaultNotification(null), 5000);
+    });
+
+    return () => {
+      unsubscribeVault();
+      unsubscribeNotice();
+    };
   }, []);
+
+  const allSessionsCount = sessions.length;
 
   // Load all user's academic items
   const loadAcademicData = async () => {
     try {
       const activeSessions = await fetchStudySessions();
-      setSessions(activeSessions);
+      const localVaultSessions = vaultService.getAllSessions();
+
+      // Merge server + local vault
+      const mergedMap = new Map<string, StudySession>();
+      activeSessions.forEach((s) => mergedMap.set(s.id, s));
+      localVaultSessions.forEach((s) => mergedMap.set(s.id, s));
+      
+      const combined = Array.from(mergedMap.values());
+      setSessions(combined);
 
       const flashcardData = await fetchFlashcards();
       setCollections(flashcardData.collections);
       setFlashcards(flashcardData.flashcards);
     } catch (err) {
-      console.error("Failed to fetch academic context files", err);
+      console.warn("Offline fallback - using Local Knowledge Vault:", err);
+      const localVaultSessions = vaultService.getAllSessions();
+      setSessions(localVaultSessions);
     }
   };
 
@@ -107,9 +165,18 @@ export default function App() {
   };
 
   // Nexus topic launch callback
+  const [targetRecallSessionId, setTargetRecallSessionId] = useState<string | null>(null);
+  const [targetRecallTopic, setTargetRecallTopic] = useState<string | null>(null);
+
   const handleLaunchTopicFromNexus = (topic: string) => {
     setPassedTopicFromNexus(topic);
     setCurrentRoute("workspace");
+  };
+
+  const handleOpenRecallFromNexus = (sessionId?: string, topic?: string) => {
+    setTargetRecallSessionId(sessionId || null);
+    setTargetRecallTopic(topic || null);
+    setCurrentRoute("flashcards");
   };
 
   const handleStudyNavigation = (id: string) => {
@@ -206,6 +273,26 @@ export default function App() {
         className={`fixed inset-0 z-[-15] pointer-events-none bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-900/20 via-[#0c0e12]/0 to-[#0c0e12]/0 transition-opacity duration-1000 ease-in-out ${isFocusMode ? "opacity-100" : "opacity-0"}`}
       />
 
+      {/* Top Bar for Vault Action & Quick Stats */}
+      <div className="w-full max-w-7xl mx-auto px-4 pt-4 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-mono text-slate-400 bg-slate-900/80 px-2.5 py-1 rounded-lg border border-slate-800/80 flex items-center gap-1.5">
+            <Database className="w-3 h-3 text-emerald-400" />
+            Local Knowledge Vault Active ({allSessionsCount} Sessions)
+          </span>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setIsVaultImportOpen(true)}
+          className="px-3 py-1 bg-slate-900/80 hover:bg-slate-800 border border-slate-800 hover:border-emerald-500/40 text-[10px] font-mono text-slate-300 hover:text-emerald-300 rounded-lg flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
+          title="Import Markdown files to Local Knowledge Vault"
+        >
+          <FolderUp className="w-3 h-3 text-emerald-400" />
+          <span>Import Vault (.md)</span>
+        </button>
+      </div>
+
       <div className="flex-1 flex flex-row">
         
         {/* 3. CORE VIEWPORT CONTAINER */}
@@ -221,7 +308,11 @@ export default function App() {
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.2 }}
               >
-                <Nexus user={user} onLaunchTopic={handleLaunchTopicFromNexus} />
+                <Nexus 
+                  user={user} 
+                  onLaunchTopic={handleLaunchTopicFromNexus}
+                  onOpenRecall={handleOpenRecallFromNexus} 
+                />
               </motion.div>
             )}
 
@@ -261,6 +352,8 @@ export default function App() {
                   onRefreshData={loadAcademicData}
                   sessions={sessions}
                   onReopenSession={handleStudyNavigation}
+                  targetSessionId={targetRecallSessionId}
+                  targetTopic={targetRecallTopic}
                 />
               </motion.div>
             )}
@@ -295,6 +388,39 @@ export default function App() {
         </div>
 
       </div>
+
+      {/* Vault Import Modal */}
+      <VaultImportModal
+        isOpen={isVaultImportOpen}
+        onClose={() => setIsVaultImportOpen(false)}
+        onImportCompleted={() => loadAcademicData()}
+      />
+
+      {/* Subtle Import Notification Toast */}
+      <AnimatePresence>
+        {vaultNotification && (
+          <motion.div
+            initial={{ opacity: 0, y: 20, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.9 }}
+            className="fixed bottom-24 right-6 z-50 bg-slate-900/95 border border-emerald-500/40 rounded-xl p-3.5 shadow-2xl backdrop-blur-md flex items-center gap-3 text-left max-w-sm"
+          >
+            <div className="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+              <CheckCircle2 className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-white leading-tight">
+                {vaultNotification.message}
+              </p>
+              {vaultNotification.sub && (
+                <p className="text-[10px] font-mono text-emerald-400 mt-0.5">
+                  {vaultNotification.sub}
+                </p>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {(currentRoute === "workspace" || currentRoute === "flashcards") && (
         <WorkspaceMascot />

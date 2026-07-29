@@ -187,6 +187,16 @@ export async function updateSessionIntent(sessionId: string, intent: string): Pr
   return data.session;
 }
 
+export async function finalizeStudySessionApi(session: StudySession): Promise<StudySession> {
+  const res = await apiFetch(`${API_BASE}/api/study/sessions/finalize`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ session }),
+  });
+  const data = await parseApiResponse<{ session: StudySession }>(res, "Failed to finalize study session");
+  return data.session || session;
+}
+
 export async function fetchFlashcards(): Promise<{ collections: FlashcardCollection[]; flashcards: Flashcard[] }> {
   const res = await apiFetch(`${API_BASE}/api/flashcards`);
   return parseApiResponse<{ collections: FlashcardCollection[]; flashcards: Flashcard[] }>(res, "Failed to fetch flashcards");

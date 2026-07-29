@@ -40,12 +40,13 @@ app.use(express.json({ limit: "10mb" }));
 app.use(async (req, res, next) => {
   const userId = req.headers["x-user-id"];
   if (userId) {
-    activeSessionUserId = userId;
+    const userIdStr = Array.isArray(userId) ? userId[0] : userId;
+    activeSessionUserId = userIdStr;
     
     // If the local in-memory DB is empty (due to cold start) and we have supabase
-    if (!Object.values(db.users).find((u) => u.id === userId) && supabase) {
+    if (!Object.values(db.users).find((u) => u.id === userIdStr) && supabase) {
       try {
-        const { data, error } = await supabase.from("users").select("*").eq("id", userId).single();
+        const { data, error } = await supabase.from("users").select("*").eq("id", userIdStr).single();
         if (data) {
           const loadedUser = {
             id: data.id,
@@ -70,9 +71,9 @@ app.use(async (req, res, next) => {
           db.users[data.email] = loadedUser;
           
           if (data.preferences && data.preferences._appState) {
-            db.sessions[userId] = data.preferences._appState.sessions || [];
-            db.flashcards[userId] = data.preferences._appState.flashcards || [];
-            db.collections[userId] = data.preferences._appState.collections || [];
+            db.sessions[userIdStr] = data.preferences._appState.sessions || [];
+            db.flashcards[userIdStr] = data.preferences._appState.flashcards || [];
+            db.collections[userIdStr] = data.preferences._appState.collections || [];
           }
         }
       } catch (err) {
@@ -84,10 +85,13 @@ app.use(async (req, res, next) => {
 });
 
 
-// Normalize URL for Vercel/Netlify serverless function routing if /api prefix was stripped
+// Normalize URL for Vercel/Netlify serverless function routing if routed via serverless handler
 app.use((req, res, next) => {
-  if ((IS_VERCEL || IS_NETLIFY) && !req.url.startsWith("/api/")) {
-    req.url = "/api" + (req.url.startsWith("/") ? "" : "/") + req.url;
+  if (req.url.startsWith("/.netlify/functions/api")) {
+    req.url = req.url.replace("/.netlify/functions/api", "");
+    if (!req.url.startsWith("/api")) {
+      req.url = "/api" + (req.url.startsWith("/") ? "" : "/") + req.url;
+    }
   }
   next();
 });
@@ -486,16 +490,18 @@ function saveDb() {
   if (supabase && activeSessionUserId) {
     const user = Object.values(db.users).find(u => u.id === activeSessionUserId);
     if (user) {
-      supabase.from("users").update({
-        preferences: {
-          ...user.preferences,
-          _appState: {
-            sessions: db.sessions[activeSessionUserId] || [],
-            flashcards: db.flashcards[activeSessionUserId] || [],
-            collections: db.collections[activeSessionUserId] || []
+      Promise.resolve(
+        supabase.from("users").update({
+          preferences: {
+            ...user.preferences,
+            _appState: {
+              sessions: db.sessions[activeSessionUserId] || [],
+              flashcards: db.flashcards[activeSessionUserId] || [],
+              collections: db.collections[activeSessionUserId] || []
+            }
           }
-        }
-      }).eq("id", activeSessionUserId).then(() => {}).catch(() => {});
+        }).eq("id", activeSessionUserId)
+      ).catch(() => {});
     }
   }
 }
@@ -1325,6 +1331,41 @@ app.post("/api/study/sessions/update-intent", (req, res) => {
   res.json({ session: { ...session, isOfflineSocraticMode: isGeminiQuotaExceeded } });
 });
 
+// Finalize Study Session endpoint
+app.post("/api/study/sessions/finalize", (req, res) => {
+  if (!activeSessionUserId) {
+    return res.status(401).json({ error: "No active session user" });
+  }
+  const { session } = req.body;
+  if (!session || !session.id) {
+    return res.status(400).json({ error: "Missing valid session object" });
+  }
+
+  if (!db.sessions[activeSessionUserId]) {
+    db.sessions[activeSessionUserId] = [];
+  }
+
+  const userSessions = db.sessions[activeSessionUserId];
+  const existingIdx = userSessions.findIndex((s) => s.id === session.id);
+
+  const finalized = {
+    ...session,
+    status: "COMPLETED",
+    progress: 100,
+    lastUpdated: new Date().toISOString(),
+  };
+
+  if (existingIdx >= 0) {
+    userSessions[existingIdx] = finalized;
+  } else {
+    userSessions.push(finalized);
+  }
+
+  saveDb();
+  console.log(`[LIFECYCLE] Server finalized and stored session: ${finalized.id} ("${finalized.title}")`);
+  res.json({ session: finalized });
+});
+
 // Robust JSON Parsing helper to handle unescaped LaTeX backslashes or formatting issues from LLM responses
 export function robustParseJson(raw: string): any {
   let clean = raw.trim();
@@ -1562,9 +1603,17 @@ app.post("/api/study/chat", async (req, res) => {
       learningStreak: 1,
       cardsMastered: 0,
       totalCards: 0,
-      preferences: {},
+      preferences: {
+        theme: "obsidian",
+        accentColor: "indigo",
+        fontSize: "medium",
+        teachingStyle: "Socratic",
+        cognitiveLoad: "Master",
+        selectedProvider: "gemini-3.5-flash",
+        selectedModel: "gemini-3.1-flash-lite",
+      },
       providers: []
-    };
+    } as any;
     db.users["unknown_" + activeSessionUserId] = user;
   }
 
@@ -1583,8 +1632,10 @@ app.post("/api/study/chat", async (req, res) => {
       prerequisites: [],
       outline: [],
       messages: [],
-      createdAt: new Date().toISOString()
-    };
+      createdAt: new Date().toISOString(),
+      lastUpdated: new Date().toISOString(),
+      status: "ACTIVE",
+    } as any;
     if (!db.sessions[activeSessionUserId]) db.sessions[activeSessionUserId] = [];
     db.sessions[activeSessionUserId].push(session);
   }

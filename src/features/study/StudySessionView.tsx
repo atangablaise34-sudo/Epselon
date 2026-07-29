@@ -7,7 +7,7 @@ import {
   Folder, StopCircle, LogOut, Play, CameraOff, MessageSquare, GraduationCap, ArrowLeft, XCircle
 } from "lucide-react";
 import { UserProfile, StudySession, ChatMessage } from "../../types";
-import { sendChatMessage, createStudySession, updatePreferences, clearStudySession, updateSessionIntent } from "../../lib/api";
+import { sendChatMessage, createStudySession, updatePreferences, clearStudySession, updateSessionIntent, finalizeStudySessionApi } from "../../lib/api";
 import RadialPulseLoader from "../../../components/ui/loading-animation";
 import TransformedLessonView from "./TransformedLessonView";
 import MathFormula from "../../components/MathFormula";
@@ -20,6 +20,9 @@ import { EducationalContextEngine, EducationalContextPacket } from "../../lib/pr
 import EducationalContextDetailsModal from "../../components/EducationalContextDetailsModal";
 import { AdaptiveLearningAssessmentEngine } from "../../lib/protocol/adaptiveAssessmentEngine";
 import TeacherLensOverlay from "./TeacherLensOverlay";
+import { finalizeSession, createLivingStudySession, updateSessionPrompt, appendAIMessage, recordReflection, recordTeacherLens } from "../../lib/sessionLifecycle";
+import { downloadMarkdownFile, downloadPDFFile } from "../../lib/sessionExporter";
+import { getAllDraftSessions, clearDraftSession } from "../../lib/db";
 
 interface ReflectionCard {
   type: "tf" | "mc" | "fib" | "match" | "arrange" | "short" | "scenario";
@@ -160,6 +163,44 @@ export default function StudySessionView({
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [linkInputUrl, setLinkInputUrl] = useState("");
   const [linkModalError, setLinkModalError] = useState<string | null>(null);
+
+  // Session Lifecycle & Finalization States
+  const [isFinalizing, setIsFinalizing] = useState(false);
+  const [showFinalizeModal, setShowFinalizeModal] = useState(false);
+  const [finalizedData, setFinalizedData] = useState<{ finalizedSession: StudySession; markdownContent: string; pdfBlob: Blob } | null>(null);
+
+  // Draft Recovery State
+  const [activeDraft, setActiveDraft] = useState<StudySession | null>(null);
+  const [showDraftModal, setShowDraftModal] = useState(false);
+
+  const handleFinishSession = async () => {
+    if (!activeSession) return;
+    setIsFinalizing(true);
+    try {
+      const result = await finalizeSession(activeSession, user);
+      await finalizeStudySessionApi(result.finalizedSession);
+      setFinalizedData(result);
+      setShowFinalizeModal(true);
+      onRefreshSessions();
+    } catch (err: any) {
+      console.error("Failed to finalize study session:", err);
+      setError("Failed to finalize study session. Please try again.");
+    } finally {
+      setIsFinalizing(false);
+    }
+  };
+
+  const handleResumeDraft = (draft: StudySession) => {
+    onSelectSession(draft.id);
+    setShowDraftModal(false);
+    setActiveDraft(null);
+  };
+
+  const handleDiscardDraft = async (draft: StudySession) => {
+    await clearDraftSession(draft.id);
+    setShowDraftModal(false);
+    setActiveDraft(null);
+  };
 
   // Sync cameraStreamRef
   useEffect(() => {
@@ -1730,6 +1771,26 @@ export default function StudySessionView({
 
                 {/* Header Actions */}
                 <div className="flex items-center gap-2 relative">
+                  {/* Finish Session Button */}
+                  {activeSession && activeSession.status !== "COMPLETED" && (
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      type="button"
+                      disabled={isFinalizing}
+                      onClick={handleFinishSession}
+                      className="px-3.5 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 border border-emerald-400/30 text-[10px] font-mono uppercase tracking-wider font-bold text-white rounded-lg flex items-center gap-1.5 transition-all shadow-md shadow-emerald-500/20 cursor-pointer disabled:opacity-50"
+                      title="Finalize study session, generate exports, and sync knowledge graph"
+                    >
+                      {isFinalizing ? (
+                        <RefreshCw className="w-3 h-3 text-white animate-spin" />
+                      ) : (
+                        <CheckCircle2 className="w-3 h-3 text-emerald-300" />
+                      )}
+                      <span>Finish Session</span>
+                    </motion.button>
+                  )}
+
                   {/* "New Chat" Button (Only show if conversation is active/initiated) */}
                   {activeSession && (
                     <motion.button
@@ -3061,6 +3122,111 @@ export default function StudySessionView({
       onClose={() => setIsDetailsModalOpen(false)}
       packet={activeEcePacket}
     />
+
+    {/* Finalization Success Modal */}
+    <AnimatePresence>
+      {showFinalizeModal && finalizedData && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="bg-slate-950 border border-emerald-500/40 rounded-2xl p-6 max-w-lg w-full text-center space-y-5 shadow-2xl relative overflow-hidden"
+          >
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 via-teal-400 to-indigo-500" />
+            
+            <div className="mx-auto w-12 h-12 bg-emerald-500/20 border border-emerald-500/40 rounded-full flex items-center justify-center text-emerald-400">
+              <CheckCircle2 className="w-6 h-6 animate-pulse" />
+            </div>
+
+            <div className="space-y-1">
+              <span className="text-[10px] font-mono uppercase tracking-widest text-emerald-400 font-bold">
+                Session Lifecycle Completed
+              </span>
+              <h3 className="text-xl font-bold text-white">
+                {finalizedData.finalizedSession.title}
+              </h3>
+              <p className="text-xs text-slate-400 font-light leading-relaxed max-w-sm mx-auto pt-1">
+                This study session has been finalized. Dialogue, lesson cards, reflection evaluations, and teacher lens assessments are now frozen and saved in your Recall Vault.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => downloadMarkdownFile(finalizedData.finalizedSession, user)}
+                className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 text-xs font-semibold rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer"
+              >
+                <FileText className="w-4 h-4 text-blue-400" />
+                <span>Markdown (.md)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => downloadPDFFile(finalizedData.finalizedSession, user)}
+                className="px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-semibold rounded-xl flex items-center justify-center gap-2 transition-all shadow-md shadow-emerald-500/20 cursor-pointer"
+              >
+                <FileText className="w-4 h-4 text-white" />
+                <span>PDF Document</span>
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowFinalizeModal(false)}
+              className="w-full py-2.5 bg-slate-900/60 hover:bg-slate-800 text-slate-400 hover:text-white text-xs font-mono uppercase tracking-wider font-semibold rounded-xl border border-slate-800 transition-colors cursor-pointer"
+            >
+              Done & Return to Workspace
+            </button>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
+
+    {/* Draft Recovery Modal */}
+    <AnimatePresence>
+      {showDraftModal && activeDraft && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="bg-slate-950 border border-blue-500/30 rounded-2xl p-6 max-w-md w-full text-left space-y-4 shadow-2xl relative"
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-blue-500/20 border border-blue-500/30 text-blue-400">
+                <Clock className="w-5 h-5 animate-spin" style={{ animationDuration: "8s" }} />
+              </div>
+              <div>
+                <span className="text-[10px] font-mono text-blue-400 uppercase tracking-wider font-bold">Unfinished Session Found</span>
+                <h4 className="text-sm font-bold text-white leading-tight">{activeDraft.title}</h4>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-400 leading-relaxed font-light">
+              An unfinalized study session draft on <strong className="text-slate-200">{activeDraft.subject}</strong> was recovered from local storage. Would you like to resume where you left off?
+            </p>
+
+            <div className="flex items-center gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => handleResumeDraft(activeDraft)}
+                className="flex-1 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-mono text-xs uppercase tracking-wider font-bold rounded-xl border border-blue-400/30 shadow-md shadow-blue-500/20 transition-all cursor-pointer"
+              >
+                Resume Session
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDiscardDraft(activeDraft)}
+                className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-slate-200 font-mono text-xs uppercase tracking-wider font-semibold rounded-xl border border-slate-800 transition-all cursor-pointer"
+              >
+                Discard Draft
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
 
     </div>
   );

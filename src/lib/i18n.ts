@@ -5,7 +5,7 @@ export const translations = {
     // Navigation
     workspace: "Study Workspace",
     knowledgeMap: "Knowledge Map",
-    flashcards: "Flashcards",
+    flashcards: "Recall",
     settings: "Settings",
 
     // Settings
@@ -67,7 +67,7 @@ export const translations = {
     // Navigation
     workspace: "Espace d'étude",
     knowledgeMap: "Carte de connaissances",
-    flashcards: "Cartes mémoire",
+    flashcards: "Rappel",
     settings: "Paramètres",
 
     // Settings

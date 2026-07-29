@@ -81,17 +81,60 @@ export interface ChatMessage {
   };
 }
 
+export type SessionStatus = 
+  | "CREATED" 
+  | "ACTIVE" 
+  | "REFLECTING" 
+  | "ASSESSMENT" 
+  | "TEACHER_LENS" 
+  | "COMPLETED" 
+  | "ARCHIVED";
+
 export interface StudySession {
   id: string;
   title: string;
-  focus: string;
-  difficulty: "Beginner" | "Intermediate" | "Advanced";
-  bloomLevel: string;
-  strategy: string;
-  progress: number;
-  prerequisites: Array<{ name: string; completed: boolean }>;
-  outline: string[];
+  mode: string;
+  subject: string;
+  createdAt: string;
+  lastUpdated: string;
+  status: SessionStatus;
+  metadata: Record<string, any>;
+  originalPrompt: string;
+  enhancedPrompt: string;
   messages: ChatMessage[];
+  lessonCards: Array<{ id: string; title: string; content: string; type?: string }>;
+  reflectionCards: Array<any>;
+  reflectionAnswers: Array<{ cardIndex?: number; question: string; answer: any; isCorrect?: boolean; feedback?: string }>;
+  assessmentQuestions: Array<any>;
+  assessmentAnswers: Array<{ questionId?: string; question: string; selectedAnswer: any; isCorrect?: boolean; score?: number }>;
+  teacherLens: {
+    discussionNotes?: string;
+    studentStrengths?: string[];
+    gapAreas?: string[];
+    gradeRecommendation?: string;
+    completedAt?: string;
+  } | null;
+  knowledgeGraphUpdates: Array<{ concept: string; targetConcept?: string; relationship?: string; masteryDelta?: number }>;
+  mastery: number;
+  recommendations: string[];
+  personalNotes: string[];
+  attachments: Array<{ id: string; name: string; type: string; path?: string }>;
+  exportStatus?: {
+    markdownGenerated?: boolean;
+    pdfGenerated?: boolean;
+    markdownPath?: string;
+    pdfPath?: string;
+    generatedAt?: string;
+  };
+
+  // Legacy & UI compatibility fields
+  focus?: string;
+  difficulty?: "Beginner" | "Intermediate" | "Advanced" | string;
+  bloomLevel?: string;
+  strategy?: string;
+  progress?: number;
+  prerequisites?: Array<{ name: string; completed: boolean }>;
+  outline?: string[];
   currentIntent?: string;
   manualIntent?: string;
   isOfflineSocraticMode?: boolean;

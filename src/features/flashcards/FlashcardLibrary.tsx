@@ -11,6 +11,9 @@ import { submitCardReview, updateSessionIntent } from "../../lib/api";
 import { CardStack } from "../../../components/ui/card-stack";
 import SessionExportModal from "../../components/SessionExportModal";
 import MathFormula from "../../components/MathFormula";
+import { getAllCompletedSessions } from "../../lib/db";
+import vaultService from "../../lib/vaultService";
+import EventBus from "../../lib/EventBus";
 
 interface FlashcardLibraryProps {
   user: UserProfile;
@@ -19,6 +22,8 @@ interface FlashcardLibraryProps {
   onRefreshData: () => void;
   sessions?: StudySession[];
   onReopenSession?: (sessionId: string) => void;
+  targetSessionId?: string | null;
+  targetTopic?: string | null;
 }
 
 interface LearningDomain {
@@ -44,7 +49,9 @@ export default function FlashcardLibrary({
   flashcards, 
   onRefreshData,
   sessions = [],
-  onReopenSession 
+  onReopenSession,
+  targetSessionId,
+  targetTopic
 }: FlashcardLibraryProps) {
   // Navigation & filter states
   const [activeDomainId, setActiveDomainId] = useState<string | null>(null);
@@ -64,6 +71,48 @@ export default function FlashcardLibrary({
   const [selectedGraphNode, setSelectedGraphNode] = useState<string | null>(null);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [exportSessionTargetId, setExportSessionTargetId] = useState<string | null>(null);
+
+  // Load finalized sessions from Local Knowledge Vault
+  const [completedSessions, setCompletedSessions] = useState<StudySession[]>([]);
+
+  React.useEffect(() => {
+    const updateSessionsFromVault = () => {
+      const vaultSessions = vaultService.getAllSessions();
+      const mergedMap = new Map<string, StudySession>();
+      sessions.forEach(s => mergedMap.set(s.id, s));
+      vaultSessions.forEach(s => mergedMap.set(s.id, s));
+      setCompletedSessions(Array.from(mergedMap.values()));
+    };
+
+    updateSessionsFromVault();
+    const unsub = EventBus.subscribe("VAULT_UPDATED", updateSessionsFromVault);
+    return () => unsub();
+  }, [sessions]);
+
+  // Handle targeting specific session or topic passed from Knowledge Graph / external navigation
+  React.useEffect(() => {
+    const list = completedSessions.length > 0 ? completedSessions : sessions;
+    if (!list || list.length === 0) return;
+
+    if (targetSessionId) {
+      setActiveLibraryTab("cards");
+      const idx = list.findIndex(s => s.id === targetSessionId);
+      if (idx !== -1) {
+        setActiveCardIndex(idx);
+      }
+    } else if (targetTopic) {
+      const idx = list.findIndex(s => 
+        s.id.toLowerCase() === targetTopic.toLowerCase() ||
+        s.title.toLowerCase().includes(targetTopic.toLowerCase()) || 
+        (s.focus && s.focus.toLowerCase().includes(targetTopic.toLowerCase())) ||
+        (s.subject && s.subject.toLowerCase().includes(targetTopic.toLowerCase()))
+      );
+      if (idx !== -1) {
+        setActiveLibraryTab("cards");
+        setActiveCardIndex(idx);
+      }
+    }
+  }, [targetSessionId, targetTopic, completedSessions, sessions]);
 
   // --------------------------------------------------
   // KNOWLEDGE EXTRACTION ENGINE (DYNAMIC COMPILATION)
@@ -218,7 +267,7 @@ export default function FlashcardLibrary({
 
     // Group real database sessions by focus
     const grouped: Record<string, StudySession[]> = {};
-    sessions.forEach(sess => {
+    completedSessions.forEach(sess => {
       const focus = sess.focus || "General Study";
       let matchedKey = Object.keys(templates).find(k => k.toLowerCase() === focus.toLowerCase());
       if (!matchedKey) {
@@ -604,9 +653,20 @@ export default function FlashcardLibrary({
           {activeLibraryTab === "cards" ? (
             /* 🗃️ LIFELONG LEARNING CARDS SYSTEM (Redesigned Recall Page with 3D Constellation Card Stack) */
             <div className="space-y-8 flex flex-col items-center w-full">
-              {sessions.length > 0 ? (
-                (() => {
-                  const cardStackItems = sessions.map((sess) => {
+              {(() => {
+                const displaySessions = completedSessions.length > 0 ? completedSessions : sessions;
+                if (displaySessions.length === 0) {
+                  return (
+                    <div className="col-span-full p-12 rounded-2xl bg-slate-900/10 border border-slate-800 border-dashed text-center space-y-4 w-full">
+                      <BookOpen className="w-8 h-8 text-slate-600 mx-auto stroke-[1.2]" />
+                      <h3 className="text-slate-300 font-serif font-semibold">No Lifelong Learning Cards Yet</h3>
+                      <p className="text-xs text-slate-500 max-w-xs mx-auto">
+                        Start a study session in the AI Workspace. Nimo will compile your conversations into interactive cards as you learn.
+                      </p>
+                    </div>
+                  );
+                }
+                const cardStackItems = displaySessions.map((sess) => {
                     const extractedEquations: string[] = [];
                     const extractedConcepts: string[] = [];
                     let autoNotesCount = 0;
@@ -907,15 +967,7 @@ export default function FlashcardLibrary({
                     </>
                   );
                 })()
-              ) : (
-                <div className="col-span-full p-12 rounded-2xl bg-slate-900/10 border border-slate-800 border-dashed text-center space-y-4 w-full">
-                  <BookOpen className="w-8 h-8 text-slate-600 mx-auto stroke-[1.2]" />
-                  <h3 className="text-slate-300 font-serif font-semibold">No Lifelong Learning Cards Yet</h3>
-                  <p className="text-xs text-slate-500 max-w-xs mx-auto">
-                    Start a study session in the AI Workspace. Nimo will compile your conversations into interactive cards as you learn.
-                  </p>
-                </div>
-              )}
+              }
             </div>
           ) : (
             /* 🏰 ORIGINAL DOMAINS CATALOG (Redesigned with 3D Card Stack) */

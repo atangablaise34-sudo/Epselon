@@ -47,7 +47,7 @@ export default function GradientMenu({
     },
     { 
       id: 'flashcards', 
-      title: isFr ? 'Cartes' : 'Flashcards', 
+      title: isFr ? 'Rappel' : 'Recall', 
       icon: <Layers className="w-5 h-5" />, 
       gradientFrom: '#705FD9', 
       gradientTo: '#9C8BD9' 

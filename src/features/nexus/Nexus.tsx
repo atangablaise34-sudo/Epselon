@@ -4,14 +4,17 @@ import {
   Network, Search, Compass, BookOpen, Target, 
   HelpCircle, ChevronRight, Play, Info, Settings2, Sliders,
   Award, Clock, Layers, Flame, CheckCircle2, FileText, Sparkles, Book,
-  Plus, Minus, Maximize
+  Plus, Minus, Maximize, Database
 } from "lucide-react";
 import { UserProfile } from "../../types";
 import MathFormula from "../../components/MathFormula";
+import vaultService from "../../lib/vaultService";
+import EventBus from "../../lib/EventBus";
 
 interface NexusProps {
   user: UserProfile;
   onLaunchTopic: (topic: string) => void;
+  onOpenRecall?: (sessionId?: string, topic?: string) => void;
 }
 
 interface Node {
@@ -29,6 +32,7 @@ interface Node {
   category?: string;
   prereqs?: string[];
   hasBeenDragged?: boolean;
+  sessionId?: string;
 
   // High-fidelity Knowledge Object parameters
   canonicalName?: string;
@@ -64,226 +68,17 @@ const relativeCoords: { [key: string]: { rx: number; ry: number } } = {
   entropy: { rx: 0.50, ry: 0.15 }
 };
 
-const initialNodes: Node[] = [
-  {
-    id: "wave_fn",
-    label: "Schrödinger Wavefunction",
-    group: "quantum",
-    val: 12,
-    mastery: 85,
-    x: 150,
-    y: 120,
-    vx: 0,
-    vy: 0,
-    radius: 18,
-    category: "Wave Mechanics",
-    desc: "A mathematical description of the quantum state of an isolated physical system.",
-    prereqs: ["Complex Numbers", "Classical Wave Physics"],
-    canonicalName: "Schrödinger Wavefunction",
-    aliases: ["Schrödinger Equation", "Wavefunction", "Ψ", "Psi"],
-    definition: "A mathematical function describing the probability amplitude of a quantum system's state.",
-    contexts: ["Quantum Physics", "Wave Mechanics", "Information Theory"],
-    difficulty: "hard",
-    examples: ["The static wave state in an infinite one-dimensional potential well.", "Quantized quantum-dot energy packets."],
-    equations: ["i\\hbar \\frac{\\partial\\Psi}{\\partial t} = \\hat{H}\\Psi", "\\int |\\Psi|^2 dx = 1"],
-    prerequisites: ["Complex Numbers", "Classical Wave Physics"],
-    relatedConcepts: ["Eigenstates & Operators", "Heisenberg Uncertainty Principle"],
-    sourceConversations: ["sess_quantum_1"],
-    learningSessions: ["Session: Wave-Particle Duality"],
-    recentActivity: true,
-    ringProgress: 85
-  },
-  {
-    id: "heis_unc",
-    label: "Heisenberg Uncertainty Principle",
-    group: "quantum",
-    val: 8,
-    mastery: 72,
-    x: 350,
-    y: 180,
-    vx: 0,
-    vy: 0,
-    radius: 15,
-    category: "Quantum Principles",
-    desc: "Asserts a fundamental limit to the precision with which certain pairs of physical properties can be known.",
-    prereqs: ["Schrödinger Wavefunction"],
-    canonicalName: "Heisenberg Uncertainty Principle",
-    aliases: ["Uncertainty Limit", "Heisenberg Principle", "Δx Δp"],
-    definition: "An absolute quantum physical constraint where conjugate variables (like position and momentum) cannot be measured with simultaneous absolute precision.",
-    contexts: ["Quantum Physics", "Fourier Analysis", "Experimental Physics"],
-    difficulty: "medium",
-    examples: ["Laser beam passing through an extremely narrow single slit diffraction grating.", "Position narrowing forcing momentum spread in microscope lenses."],
-    equations: ["\\Delta x \\cdot \\Delta p \\geq \\frac{\\hbar}{2}"],
-    prerequisites: ["Schrödinger Wavefunction"],
-    relatedConcepts: ["De Broglie Duality"],
-    sourceConversations: ["sess_quantum_1"],
-    learningSessions: ["Session: Wave-Particle Duality"],
-    recentActivity: false,
-    ringProgress: 72
-  },
-  {
-    id: "eigen",
-    label: "Eigenstates & Operators",
-    group: "math",
-    val: 10,
-    mastery: 50,
-    x: 220,
-    y: 320,
-    vx: 0,
-    vy: 0,
-    radius: 16,
-    category: "Mathematical Setup",
-    desc: "Represent physical observables as linear operators acting on Hilbert space vectors.",
-    prereqs: ["Schrödinger Wavefunction"],
-    canonicalName: "Eigenstates & Operators",
-    aliases: ["Eigenvectors", "Observables", "Linear Operators"],
-    definition: "The formulation of physical properties (energy, position, spin) as Hermitian linear operators that project specific quantized values (eigenvalues) when acting on wavevectors.",
-    contexts: ["Quantum Physics", "Linear Algebra", "Functional Analysis"],
-    difficulty: "hard",
-    examples: ["The energy Hamiltonian operator projecting discrete energy levels.", "Position operator measurements collapsing states."],
-    equations: ["\\hat{A} |\\psi\\rangle = a |\\psi\\rangle", "\\hat{H} \\Psi = E \\Psi"],
-    prerequisites: ["Schrödinger Wavefunction"],
-    relatedConcepts: ["Hilbert Space Formulations"],
-    sourceConversations: [],
-    learningSessions: [],
-    recentActivity: false,
-    ringProgress: 50
-  },
-  {
-    id: "diffract",
-    label: "Double-Slit Diffraction",
-    group: "experimental",
-    val: 6,
-    mastery: 95,
-    x: 480,
-    y: 100,
-    vx: 0,
-    vy: 0,
-    radius: 13,
-    category: "Physical Experiments",
-    desc: "The classic demonstration of quantum wave-particle superposition and interference patterns.",
-    prereqs: ["Classical Wave Physics"],
-    canonicalName: "Double-Slit Diffraction",
-    aliases: ["Young Double-Slit", "Superposition Experiment", "Interference Patterns"],
-    definition: "An elegant experimental apparatus proving the wave-particle duality of matter by demonstrating that particles fired individually still form wave-like interference grids when unobserved.",
-    contexts: ["Experimental Physics", "Wave Optics", "Quantum Physics"],
-    difficulty: "medium",
-    examples: ["Thomas Young's historic coherent light interference fringes.", "Firing single electrons through standard double-slit detectors over time."],
-    equations: ["d \\sin\\theta = m \\lambda"],
-    prerequisites: ["Classical Wave Physics"],
-    relatedConcepts: ["De Broglie Duality"],
-    sourceConversations: [],
-    learningSessions: [],
-    recentActivity: false,
-    ringProgress: 95
-  },
-  {
-    id: "debroglie",
-    label: "De Broglie Duality",
-    group: "quantum",
-    val: 7,
-    mastery: 90,
-    x: 520,
-    y: 280,
-    vx: 0,
-    vy: 0,
-    radius: 14,
-    category: "Wave Mechanics",
-    desc: "Formulates that any moving particle has an associated wave character with λ = h/p.",
-    prereqs: ["Classical Wave Physics"],
-    canonicalName: "De Broglie Duality",
-    aliases: ["De Broglie Hypothesis", "Matter Waves", "λ = h/p"],
-    definition: "The physical hypothesis asserting that all matter (including electrons, atoms, and macro-molecules) exhibits an intrinsic wave character with a wavelength inversely proportional to its momentum.",
-    contexts: ["Quantum Physics", "Theoretical Physics", "Materials Engineering"],
-    difficulty: "easy",
-    examples: ["Electron microscopy utilizing sub-nanometer wave parameters.", "Thermal neutron beam crystal lattice scatters."],
-    equations: ["\\lambda = \\frac{h}{p}"],
-    prerequisites: ["Classical Wave Physics"],
-    relatedConcepts: ["Double-Slit Diffraction"],
-    sourceConversations: [],
-    learningSessions: [],
-    recentActivity: false,
-    ringProgress: 90
-  },
-  {
-    id: "hilbert",
-    label: "Hilbert Space Formulations",
-    group: "math",
-    val: 5,
-    mastery: 35,
-    x: 100,
-    y: 250,
-    vx: 0,
-    vy: 0,
-    radius: 11,
-    category: "Mathematical Setup",
-    desc: "An abstract vector space possessing the structure of an inner product that allows length and angle measurement.",
-    prereqs: ["Eigenstates & Operators"],
-    canonicalName: "Hilbert Space Formulations",
-    aliases: ["Hilbert Space", "Vector Inner Products", "State Space"],
-    definition: "An abstract, infinite-dimensional complex vector space with an inner product, serving as the rigorous mathematical canvas for quantum state vectors and wave functions.",
-    contexts: ["Functional Analysis", "Pure Mathematics", "Quantum Computing"],
-    difficulty: "hard",
-    examples: ["The infinite-dimensional state space of continuous wavefunctions.", "Finite state Bloch sphere projections for quantum bit gates."],
-    equations: ["\\langle \\psi | \\phi \\rangle = \\int \\psi^*(x)\\phi(x)dx"],
-    prerequisites: ["Eigenstates & Operators"],
-    relatedConcepts: ["Quantum Mechanics"],
-    sourceConversations: [],
-    learningSessions: [],
-    recentActivity: false,
-    ringProgress: 35
-  },
-  {
-    id: "entropy",
-    label: "Entropy (Multi-Context)",
-    group: "multi",
-    val: 14,
-    mastery: 68,
-    x: 300,
-    y: 60,
-    vx: 0,
-    vy: 0,
-    radius: 19,
-    category: "Unified Concepts",
-    desc: "A universal concept measuring disorder, microstates, and information content across multi-disciplinary boundaries.",
-    prereqs: ["Classical Wave Physics"],
-    canonicalName: "Entropy (Universal Multi-Context)",
-    aliases: ["S", "Shannon Entropy", "Disorder Measure", "Microstates"],
-    definition: "A fundamental measure that spans thermodynamics (thermodynamic disorder), statistical mechanics (state space configurations), chemistry (reaction spontaneity), and information theory (computational uncertainty/information limit).",
-    contexts: ["Physics", "Mechanical Engineering", "Chemistry", "Information Theory", "Computer Science"],
-    difficulty: "hard",
-    examples: [
-      "Thermodynamic: Heat engine dissipation loss.",
-      "Information Theory: Average minimum code bits to encode source text.",
-      "Chemistry: Melting of ice increasing system entropy configuration."
-    ],
-    equations: ["S = k_B \\ln \\Omega", "H(X) = -\\sum P(x_i) \\log_2 P(x_i)"],
-    prerequisites: ["Eigenstates & Operators"],
-    relatedConcepts: ["Heisenberg Uncertainty Principle", "Schrödinger Wavefunction"],
-    sourceConversations: [],
-    learningSessions: ["Session: Universal Systems Entropy"],
-    recentActivity: true,
-    ringProgress: 68
-  }
-];
+const initialNodes: Node[] = [];
 
-const initialLinks: Link[] = [
-  { source: "wave_fn", target: "heis_unc", type: "Frequently Studied Together", strength: 80 },
-  { source: "wave_fn", target: "eigen", type: "Prerequisite", strength: 65 },
-  { source: "diffract", target: "debroglie", type: "Builds Upon", strength: 55 },
-  { source: "debroglie", target: "heis_unc", type: "Frequently Studied Together", strength: 40 },
-  { source: "eigen", target: "hilbert", type: "Prerequisite", strength: 75 },
-  { source: "entropy", target: "wave_fn", type: "Unified Concept Anchor", strength: 85 },
-  { source: "entropy", target: "heis_unc", type: "Information Bounds", strength: 70 }
-];
+const initialLinks: Link[] = [];
 
-export default function Nexus({ user, onLaunchTopic }: NexusProps) {
+export default function Nexus({ user, onLaunchTopic, onOpenRecall }: NexusProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const [nodes, setNodes] = useState<Node[]>(initialNodes);
   const [links, setLinks] = useState<Link[]>(initialLinks);
-  const [selectedNode, setSelectedNode] = useState<Node | null>(initialNodes[0]);
+  const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [physicsActive, setPhysicsActive] = useState(false);
   const [repulsionForce, setRepulsionForce] = useState(150);
@@ -299,46 +94,87 @@ export default function Nexus({ user, onLaunchTopic }: NexusProps) {
   const startPanRef = useRef({ x: 0, y: 0 });
   const basePanRef = useRef({ x: 0, y: 0 });
 
-  // Sync user's real-time knowledge graph auto-updates & auto-migrate to Knowledge Objects
+  // Sync user's real-time knowledge graph & reconstruct dynamically from Local Knowledge Vault
   useEffect(() => {
-    if (user && user.knowledgeGraph) {
-      if (user.knowledgeGraph.nodes && user.knowledgeGraph.nodes.length > 0) {
-        // Hydrate all loaded nodes with safety fallbacks for high-fidelity parameters
-        const hydratedNodes = user.knowledgeGraph.nodes.map((n: any) => {
-          const matchingInitial = initialNodes.find(init => init.id === n.id);
-          return {
-            ...n,
-            canonicalName: n.canonicalName || n.label || matchingInitial?.canonicalName || "",
-            aliases: n.aliases || matchingInitial?.aliases || [n.label || ""],
-            definition: n.definition || n.desc || matchingInitial?.definition || "",
-            contexts: n.contexts || (n.group ? [n.group] : matchingInitial?.contexts) || ["General Science"],
-            difficulty: n.difficulty || matchingInitial?.difficulty || "medium",
-            examples: n.examples || matchingInitial?.examples || [],
-            equations: n.equations || (n.equation ? [n.equation] : matchingInitial?.equations) || [],
-            prerequisites: n.prerequisites || n.prereqs || matchingInitial?.prerequisites || [],
-            relatedConcepts: n.relatedConcepts || matchingInitial?.relatedConcepts || [],
-            sourceConversations: n.sourceConversations || matchingInitial?.sourceConversations || [],
-            learningSessions: n.learningSessions || matchingInitial?.learningSessions || [],
-            recentActivity: n.recentActivity !== undefined ? n.recentActivity : matchingInitial?.recentActivity || false,
-            ringProgress: n.ringProgress !== undefined ? n.ringProgress : n.mastery || matchingInitial?.ringProgress || 10
-          };
-        });
+    const syncVaultNodes = () => {
+      const vaultGraphNodes = vaultService.getKnowledgeGraphNodes();
+      
+      let currentNodes = [...initialNodes];
+      if (user && user.knowledgeGraph && user.knowledgeGraph.nodes && user.knowledgeGraph.nodes.length > 0) {
+        currentNodes = user.knowledgeGraph.nodes;
+      }
 
-        setNodes(hydratedNodes);
-        
-        const exists = hydratedNodes.find((n: Node) => n.id === selectedNode?.id);
-        if (!exists) {
-          setSelectedNode(hydratedNodes[0]);
-        } else {
-          // Keep selection updated
-          const updatedSelection = hydratedNodes.find((n: Node) => n.id === selectedNode?.id);
-          if (updatedSelection) setSelectedNode(updatedSelection);
+      // Merge vault graph nodes into currentNodes
+      const nodeMap = new Map<string, Node>();
+      currentNodes.forEach((n: any) => nodeMap.set(n.id, n));
+
+      vaultGraphNodes.forEach((vNode, idx) => {
+        if (!nodeMap.has(vNode.id)) {
+          const rx = 0.2 + (idx * 0.18) % 0.65;
+          const ry = 0.2 + (idx * 0.22) % 0.65;
+          nodeMap.set(vNode.id, {
+            id: vNode.id,
+            label: vNode.name,
+            group: vNode.category || "General",
+            val: 10,
+            mastery: vNode.mastery || 80,
+            x: Math.round(rx * 600),
+            y: Math.round(ry * 400),
+            vx: 0,
+            vy: 0,
+            radius: 15,
+            category: vNode.category || "General Knowledge",
+            desc: `Knowledge Concept extracted from Local Vault session "${vNode.sessionId || vNode.name}"`,
+            canonicalName: vNode.name,
+            aliases: [vNode.name],
+            definition: `Concept "${vNode.name}" linked to session ${vNode.sessionId || "Local Vault"}`,
+            contexts: [vNode.category || "General"],
+            difficulty: "medium",
+            examples: [],
+            equations: [],
+            prerequisites: [],
+            relatedConcepts: vNode.connections,
+            sourceConversations: vNode.sessionId ? [vNode.sessionId] : [],
+            learningSessions: vNode.sessionId ? [`Session: ${vNode.sessionId}`] : [],
+            recentActivity: true,
+            ringProgress: vNode.mastery || 80,
+          });
         }
+      });
+
+      const hydratedNodes = Array.from(nodeMap.values()).map((n: any) => {
+        const matchingInitial = initialNodes.find(init => init.id === n.id);
+        return {
+          ...n,
+          canonicalName: n.canonicalName || n.label || matchingInitial?.canonicalName || "",
+          aliases: n.aliases || matchingInitial?.aliases || [n.label || ""],
+          definition: n.definition || n.desc || matchingInitial?.definition || "",
+          contexts: n.contexts || (n.group ? [n.group] : matchingInitial?.contexts) || ["General Science"],
+          difficulty: n.difficulty || matchingInitial?.difficulty || "medium",
+          examples: n.examples || matchingInitial?.examples || [],
+          equations: n.equations || (n.equation ? [n.equation] : matchingInitial?.equations) || [],
+          prerequisites: n.prerequisites || n.prereqs || matchingInitial?.prerequisites || [],
+          relatedConcepts: n.relatedConcepts || matchingInitial?.relatedConcepts || [],
+          sourceConversations: n.sourceConversations || matchingInitial?.sourceConversations || [],
+          learningSessions: n.learningSessions || matchingInitial?.learningSessions || [],
+          recentActivity: n.recentActivity !== undefined ? n.recentActivity : matchingInitial?.recentActivity || false,
+          ringProgress: n.ringProgress !== undefined ? n.ringProgress : n.mastery || matchingInitial?.ringProgress || 10
+        };
+      });
+
+      setNodes(hydratedNodes);
+      
+      const exists = hydratedNodes.find((n: Node) => n.id === selectedNode?.id);
+      if (!exists && hydratedNodes.length > 0) {
+        setSelectedNode(hydratedNodes[0]);
+      } else if (exists) {
+        setSelectedNode(exists);
       }
-      if (user.knowledgeGraph.links && user.knowledgeGraph.links.length > 0) {
-        setLinks(user.knowledgeGraph.links);
-      }
-    }
+    };
+
+    syncVaultNodes();
+    const unsub = EventBus.subscribe("VAULT_UPDATED", syncVaultNodes);
+    return () => unsub();
   }, [user]);
 
   // Reset practice answer reveal on node select
@@ -698,6 +534,9 @@ export default function Nexus({ user, onLaunchTopic }: NexusProps) {
     if (hit) {
       draggedNodeRef.current = hit;
       setSelectedNode(hit);
+      if (onOpenRecall) {
+        onOpenRecall(hit.sessionId || (hit.sourceConversations && hit.sourceConversations[0]) || hit.id, hit.label || hit.canonicalName);
+      }
     } else {
       // Background click: initiate canvas panning
       isPanningRef.current = true;
@@ -817,6 +656,18 @@ export default function Nexus({ user, onLaunchTopic }: NexusProps) {
             onMouseLeave={handleMouseUp}
             className="w-full h-full cursor-grab active:cursor-grabbing bg-[#1c1c1c]"
           />
+
+          {nodes.length === 0 && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-[#1c1c1c]/95 backdrop-blur-sm pointer-events-none z-10">
+              <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center mb-3">
+                <Network className="w-6 h-6 text-indigo-400 stroke-[1.5]" />
+              </div>
+              <h3 className="font-serif italic text-base text-slate-200 font-medium">Knowledge Graph is Currently Empty</h3>
+              <p className="text-xs text-slate-400 max-w-sm mt-1 leading-relaxed font-sans">
+                Complete a conversation in the AI Workspace to generate your first knowledge node. Once completed, your interactive graph will dynamically rebuild here.
+              </p>
+            </div>
+          )}
 
           {/* Left HUD: Legend */}
           <div className="absolute top-4 left-4 p-2.5 rounded bg-neutral-900/90 border border-neutral-800/80 backdrop-blur-md text-[9px] font-mono text-neutral-400 uppercase tracking-widest space-y-1.5 shadow-lg pointer-events-none">
@@ -1126,14 +977,24 @@ export default function Nexus({ user, onLaunchTopic }: NexusProps) {
           )}
 
           {selectedNode && (
-            <button
-              id={`btn_launch_topic_${selectedNode.id}`}
-              onClick={() => onLaunchTopic(selectedNode.label)}
-              className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
-            >
-              <Play className="w-3.5 h-3.5 fill-current" />
-              Start Guided AI Study Session
-            </button>
+            <div className="space-y-2">
+              <button
+                id={`btn_open_recall_${selectedNode.id}`}
+                onClick={() => onOpenRecall && onOpenRecall(selectedNode.sessionId || (selectedNode.sourceConversations && selectedNode.sourceConversations[0]) || selectedNode.id, selectedNode.label || selectedNode.canonicalName)}
+                className="w-full py-2.5 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/40 text-indigo-300 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer"
+              >
+                <BookOpen className="w-4 h-4 text-indigo-400" />
+                View Recall Summary Card
+              </button>
+              <button
+                id={`btn_launch_topic_${selectedNode.id}`}
+                onClick={() => onLaunchTopic(selectedNode.label)}
+                className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <Play className="w-3.5 h-3.5 fill-current" />
+                Start Guided AI Study Session
+              </button>
+            </div>
           )}
         </div>
       </div>
