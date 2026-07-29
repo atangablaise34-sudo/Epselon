@@ -44,41 +44,77 @@ app.use(async (req, res, next) => {
     const userIdStr = Array.isArray(userId) ? userId[0] : userId;
     activeSessionUserId = userIdStr;
     
-    // If the local in-memory DB is empty (due to cold start) and we have supabase
-    if (!Object.values(db.users).find((u) => u.id === userIdStr) && supabase) {
-      try {
-        const { data, error } = await supabase.from("users").select("*").eq("id", userIdStr).single();
-        if (data) {
-          const loadedUser = {
-            id: data.id,
-            email: data.email,
-            fullName: data.full_name,
-            country: data.country || "United States",
-            university: data.university || "Stanford University",
-            faculty: data.faculty || "Sciences",
-            department: data.department || "Physics",
-            academicLevel: data.academic_level || "PhD Candidate",
-            preferredLanguage: data.preferred_language || "English",
-            learningStyle: data.learning_style || "Visual",
-            weeklyCommitment: data.weekly_commitment || "5-10",
-            learningObjectives: data.learning_objectives || "",
-            masteryProgress: data.mastery_progress || 0,
-            learningStreak: data.learning_streak || 1,
-            cardsMastered: data.cards_mastered || 0,
-            totalCards: data.total_cards || 0,
-            preferences: data.preferences || {},
-            providers: data.providers || []
-          };
-          db.users[data.email] = loadedUser;
-          
-          if (data.preferences && data.preferences._appState) {
-            db.sessions[userIdStr] = data.preferences._appState.sessions || [];
-            db.flashcards[userIdStr] = data.preferences._appState.flashcards || [];
-            db.collections[userIdStr] = data.preferences._appState.collections || [];
+    // If the local in-memory DB is empty (due to cold start)
+    if (!Object.values(db.users).find((u) => u.id === userIdStr)) {
+      let loadedFromSupabase = false;
+      if (supabase) {
+        try {
+          const { data, error } = await supabase.from("users").select("*").eq("id", userIdStr).single();
+          if (data) {
+            const loadedUser = {
+              id: data.id,
+              email: data.email,
+              fullName: data.full_name,
+              country: data.country || "United States",
+              university: data.university || "Stanford University",
+              faculty: data.faculty || "Sciences",
+              department: data.department || "Physics",
+              academicLevel: data.academic_level || "PhD Candidate",
+              preferredLanguage: data.preferred_language || "English",
+              learningStyle: data.learning_style || "Visual",
+              weeklyCommitment: data.weekly_commitment || "5-10",
+              learningObjectives: data.learning_objectives || "",
+              masteryProgress: data.mastery_progress || 0,
+              learningStreak: data.learning_streak || 1,
+              cardsMastered: data.cards_mastered || 0,
+              totalCards: data.total_cards || 0,
+              preferences: data.preferences || {},
+              providers: data.providers || []
+            };
+            db.users[data.email] = loadedUser;
+            
+            if (data.preferences && data.preferences._appState) {
+              db.sessions[userIdStr] = data.preferences._appState.sessions || [];
+              db.flashcards[userIdStr] = data.preferences._appState.flashcards || [];
+              db.collections[userIdStr] = data.preferences._appState.collections || [];
+            }
+            loadedFromSupabase = true;
           }
+        } catch (err) {
+          console.error("Failed to restore state from Supabase:", err);
         }
-      } catch (err) {
-        console.error("Failed to restore state from Supabase:", err);
+      }
+
+      if (!loadedFromSupabase) {
+        console.warn("User not found in local db or Supabase, fallback building user for session", userIdStr);
+        db.users["unknown_" + userIdStr] = {
+          id: userIdStr,
+          email: "unknown@example.com",
+          fullName: "Guest Student",
+          country: "United States",
+          university: "Unknown",
+          faculty: "Sciences",
+          department: "Physics",
+          academicLevel: "Undergraduate",
+          preferredLanguage: "English",
+          learningStyle: "Visual",
+          weeklyCommitment: "5-10",
+          learningObjectives: "",
+          masteryProgress: 0,
+          learningStreak: 1,
+          cardsMastered: 0,
+          totalCards: 0,
+          preferences: {
+            theme: "obsidian",
+            accentColor: "indigo",
+            fontSize: "medium",
+            teachingStyle: "Socratic",
+            cognitiveLoad: "Master",
+            selectedProvider: "gemini-3.5-flash",
+            selectedModel: "gemini-3.1-flash-lite",
+          },
+          providers: []
+        } as any;
       }
     }
   }
@@ -1003,6 +1039,7 @@ app.post("/api/auth/login", async (req, res) => {
         };
       }
       activeSessionUserId = user.id;
+      db.users[user.email] = user;
     } else {
       // Fallback to local DB
       user = Object.values(db.users).find((u) => u.email === email);
