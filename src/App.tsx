@@ -31,7 +31,7 @@ export default function App() {
   const { isFocusMode } = useFocusMode();
 
   // Navigation
-  const [currentRoute, setCurrentRoute] = useState<"workspace" | "nexus" | "flashcards" | "settings">("settings");
+  const [currentRoute, setCurrentRoute] = useState<"workspace" | "nexus" | "flashcards" | "settings">("workspace");
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
 
   // Cached academic resources
@@ -46,6 +46,8 @@ export default function App() {
   // Mobile sidebar state
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [passedTopicFromNexus, setPassedTopicFromNexus] = useState<string | undefined>(undefined);
+
+  const [showProfileReminder, setShowProfileReminder] = useState(false);
 
   // 1. Initial Authentication & Vault Initialization Check
   useEffect(() => {
@@ -146,7 +148,7 @@ export default function App() {
 
   const handleAuthSuccess = async (authenticatedUser: UserProfile) => {
     setUser(authenticatedUser); localStorage.setItem('activeSessionUserId', authenticatedUser.id);
-    setCurrentRoute("settings");
+    setCurrentRoute("workspace");
     try {
       await loadAcademicData();
     } catch (err) {
@@ -258,13 +260,38 @@ export default function App() {
       <OnboardingView 
         user={user} 
         onRefreshUser={handleRefreshUser} 
-        onComplete={() => setCurrentRoute("settings")} 
+        onComplete={() => {
+          setShowProfileReminder(true);
+          setCurrentRoute("workspace");
+          setTimeout(() => setShowProfileReminder(false), 8000);
+        }} 
       />
     );
   }
 
   return (
     <div className={`min-h-screen flex flex-col ${bgStyle} font-sans relative`}>
+      <AnimatePresence>
+        {showProfileReminder && (
+          <motion.div
+            initial={{ opacity: 0, y: -50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -50 }}
+            className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] bg-blue-600 text-white px-4 py-3 rounded-lg shadow-xl flex items-center gap-3 w-[90%] max-w-md"
+          >
+            <User className="w-5 h-5 flex-shrink-0" />
+            <div className="flex-1 text-sm font-medium">
+              Welcome! Please update your user profile in the Settings page to personalize your experience.
+            </div>
+            <button 
+              onClick={() => setShowProfileReminder(false)}
+              className="p-1 hover:bg-white/20 rounded-md"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
       {/* Absolute solid background layer placed behind z-[-10] elements */}
       <div className={`fixed inset-0 ${pureBgColor} z-[-20] pointer-events-none transition-colors duration-1000 ${isFocusMode ? "bg-[#040608]" : ""}`} />
       

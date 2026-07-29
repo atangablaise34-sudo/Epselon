@@ -1056,7 +1056,7 @@ export default function StudySessionView({
     if (!textToUse.trim() || loading) return;
 
     if (isFocusMode || flowState === 'reviewed' || flowState === 'learning_canvas') {
-      const isGreeting = /^(hi|hello|hey|thanks|how are you|good morning|i'm ready|let's start|ready|what's up|yes|no|ok|okay|got it|cool|understood|i see|make sense|makes sense|awesome|great|good|nice)/i.test(textToUse.trim());
+      const isGreeting = /^(hi|hello|hey|thanks|how are you|good morning|i'm ready|let's start|ready|what's up|yes|no|ok|okay|got it|cool|understood|i see|make sense|makes sense|awesome|great|good|nice)[.!]?$/i.test(textToUse.trim());
       await executeSocraticDiscourseDispatch(textToUse, isGreeting);
     } else if (flowState === 'idle') {
       triggerEnhancement(textToUse);

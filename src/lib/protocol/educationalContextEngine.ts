@@ -78,9 +78,11 @@ export class PromptAnalyzer {
       "good morning", "good afternoon", "bye", "cool", "awesome", "great",
       "let's start", "ready", "ready to learn", "got it", "understood", "ok", "okay"
     ];
-    const isCasual = casualGreetings.some(word => 
-      lower === word || lower.startsWith(word + " ") || lower.endsWith(" " + word)
-    );
+    
+    // Only classify as casual if the text is strictly a greeting, ignoring trailing punctuation
+    const stripped = lower.replace(/[.!?]*$/, "").trim();
+    const isCasual = casualGreetings.includes(stripped) || 
+                     (stripped.split(" ").length <= 2 && casualGreetings.some(g => stripped === g || stripped === `${g} there` || stripped === `${g} epselon`));
 
     if (isCasual) {
       return {

@@ -1852,15 +1852,13 @@ Return your response strictly in the following JSON schema format:
         }
       }
 
-      // Add system instructions prefixed to the first user turn
-      if (contents.length > 0) {
-        contents[0].parts[0].text = `${systemInstructions}\n\n${contents[0].parts[0].text}`;
-      }
-
       const response = await generateContentWithFallback(ai, {
         model: protocolState.routing?.model || "gemini-3.1-flash-lite",
         contents: contents,
-        config: forceConvo ? undefined : {
+        config: forceConvo ? {
+          systemInstruction: systemInstructions
+        } : {
+          systemInstruction: systemInstructions,
           responseMimeType: "application/json",
         }
       });
